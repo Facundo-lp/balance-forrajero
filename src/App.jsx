@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import {
   LineChart,
@@ -108,107 +107,41 @@ const FIELD_NATURAL_TABLE = [
     summer: 19,
     utilization: 0.6,
   },
-  {
-    region: "Cristalino / Centro Sur",
-    environment: "Superficial",
-    annual: 2316,
-    autumn: 22,
-    winter: 22,
-    spring: 21,
-    summer: 35,
-    utilization: 0.52,
-  },
-  {
-    region: "Cristalino / Centro Sur",
-    environment: "Brunosol subeútrico",
-    annual: 3206,
-    autumn: 22,
-    winter: 18,
-    spring: 27,
-    summer: 33,
-    utilization: 0.55,
-  },
-  {
-    region: "Cristalino / Centro Sur",
-    environment: "Brunosol eútrico",
-    annual: 3665,
-    autumn: 21,
-    winter: 16,
-    spring: 28,
-    summer: 35,
-    utilization: 0.58,
-  },
-  {
-    region: "Areniscas",
-    environment: "Ladera alta",
-    annual: 5144,
-    autumn: 13,
-    winter: 7,
-    spring: 31,
-    summer: 49,
-    utilization: 0.58,
-  },
-  {
-    region: "Cretácico",
-    environment: "Agrio",
-    annual: 5530,
-    autumn: 23,
-    winter: 15,
-    spring: 28,
-    summer: 34,
-    utilization: 0.6,
-  },
-  {
-    region: "Litoral",
-    environment: "General",
-    annual: 6000,
-    autumn: 24,
-    winter: 16,
-    spring: 34,
-    summer: 26,
-    utilization: 0.62,
-  },
-  {
-    region: "Litoral Sur",
-    environment: "General agrícola-ganadero",
-    annual: 7000,
-    autumn: 25,
-    winter: 18,
-    spring: 36,
-    summer: 21,
-    utilization: 0.65,
-  },
-  {
-    region: "Llanuras del Este / Cuenca Laguna Merín",
-    environment: "Tendido alto",
-    annual: 3000,
-    autumn: 22,
-    winter: 10,
-    spring: 28,
-    summer: 40,
-    utilization: 0.52,
-  },
-  {
-    region: "Llanuras del Este / Cuenca Laguna Merín",
-    environment: "Plano medio",
-    annual: 3800,
-    autumn: 21,
-    winter: 11,
-    spring: 30,
-    summer: 38,
-    utilization: 0.55,
-  },
-  {
-    region: "Llanuras del Este / Cuenca Laguna Merín",
-    environment: "Bajo dulce/húmedo",
-    annual: 4500,
-    autumn: 20,
-    winter: 14,
-    spring: 31,
-    summer: 35,
-    utilization: 0.58,
-  },
 ];
+
+const RESOURCE_TYPES = [
+  "Campo natural",
+  "Pradera",
+  "Verdeo de invierno",
+  "Verdeo de verano",
+];
+
+const SEEDED_RESOURCE_TABLE = {
+  "Pradera": {
+    annual: 8500,
+    utilization: 0.65,
+    monthly: {
+      ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5,
+      jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11
+    },
+  },
+  "Verdeo de invierno": {
+    annual: 9500,
+    utilization: 0.7,
+    monthly: {
+      ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15,
+      jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0
+    },
+  },
+  "Verdeo de verano": {
+    annual: 13000,
+    utilization: 0.7,
+    monthly: {
+      ene: 20, feb: 18, mar: 10, abr: 3, may: 0, jun: 0,
+      jul: 0, ago: 0, sep: 0, oct: 0, nov: 14, dic: 35
+    },
+  },
+};
 
 function n(v) {
   const x = Number(v);
@@ -253,27 +186,15 @@ function getEnvironmentOptions(region) {
   );
 }
 
-function SummaryCard({ title, value, subtitle }) {
+function SummaryCard({ title, value }) {
   return (
-    <div
-      style={{
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
-        borderRadius: 16,
-        padding: 16,
-      }}
-    >
+    <div style={summaryCardStyle}>
       <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>
         {title}
       </div>
       <div style={{ fontSize: 24, fontWeight: 700, color: "#0f172a" }}>
         {value}
       </div>
-      {subtitle ? (
-        <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
-          {subtitle}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -289,6 +210,7 @@ export default function App() {
       id: 1,
       name: "Potrero 1",
       hectares: 100,
+      resourceType: "Campo natural",
       environment: "Serrano medio",
     },
   ]);
@@ -312,6 +234,7 @@ export default function App() {
         id: Date.now(),
         name: `Potrero ${prev.length + 1}`,
         hectares: 0,
+        resourceType: "Campo natural",
         environment: getEnvironmentOptions(farm.region)[0] || "",
       },
     ]);
@@ -319,7 +242,17 @@ export default function App() {
 
   const updatePaddock = (id, key, value) => {
     setPaddocks((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, [key]: value } : p))
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const updated = { ...p, [key]: value };
+        if (key === "resourceType" && value !== "Campo natural") {
+          updated.environment = "";
+        }
+        if (key === "resourceType" && value === "Campo natural") {
+          updated.environment = getEnvironmentOptions(farm.region)[0] || "";
+        }
+        return updated;
+      })
     );
   };
 
@@ -345,7 +278,6 @@ export default function App() {
     setHerd((prev) =>
       prev.map((h) => {
         if (h.id !== id) return h;
-
         if (key === "category") {
           const found = ANIMAL_CATEGORIES.find((a) => a.label === value);
           return {
@@ -355,7 +287,6 @@ export default function App() {
             intake: found?.intake ?? h.intake,
           };
         }
-
         return { ...h, [key]: value };
       })
     );
@@ -366,24 +297,28 @@ export default function App() {
   };
 
   const results = useMemo(() => {
-    const offerByMonth = MONTHS.map((m, monthIndex) => {
+    const offerByMonth = MONTHS.map((m) => {
       return paddocks.reduce((sum, p) => {
-        const row = getFieldNaturalRow(farm.region, p.environment);
-        if (!row) return sum;
+        if (p.resourceType === "Campo natural") {
+          const row = getFieldNaturalRow(farm.region, p.environment);
+          if (!row) return sum;
+          const dist = seasonToMonthly(row);
+          const pct = n(dist[m.key]);
+          const monthlyPerHa = row.annual * (pct / 100);
+          return sum + monthlyPerHa * n(p.hectares) * row.utilization;
+        }
 
-        const dist = seasonToMonthly(row);
-        const pct = n(dist[m.key]);
-        const monthlyPerHa = row.annual * (pct / 100);
-        const offer = monthlyPerHa * n(p.hectares) * row.utilization;
-
-        return sum + offer;
+        const resource = SEEDED_RESOURCE_TABLE[p.resourceType];
+        if (!resource) return sum;
+        const pct = n(resource.monthly[m.key]);
+        const monthlyPerHa = resource.annual * (pct / 100);
+        return sum + monthlyPerHa * n(p.hectares) * resource.utilization;
       }, 0);
     });
 
     const demandByMonth = MONTHS.map((m) => {
       return herd.reduce((sum, h) => {
-        const daily =
-          n(h.heads) * n(h.weight) * (n(h.intake) / 100);
+        const daily = n(h.heads) * n(h.weight) * (n(h.intake) / 100);
         return sum + daily * m.days;
       }, 0);
     });
@@ -395,13 +330,8 @@ export default function App() {
     const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
     const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
-
-    const totalPV = herd.reduce(
-      (sum, h) => sum + n(h.heads) * n(h.weight),
-      0
-    );
+    const totalPV = herd.reduce((sum, h) => sum + n(h.heads) * n(h.weight), 0);
     const totalArea = paddocks.reduce((sum, p) => sum + n(p.hectares), 0);
-
     const currentLoad = totalArea > 0 ? totalPV / totalArea : 0;
 
     const chartData = MONTHS.map((m, i) => ({
@@ -426,64 +356,23 @@ export default function App() {
   }, [farm.region, paddocks, herd]);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f1f5f9",
-        padding: 24,
-        fontFamily:
-          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          background: "#ffffff",
-          borderRadius: 24,
-          padding: 24,
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-        }}
-      >
+    <div style={pageStyle}>
+      <div style={containerStyle}>
         <div style={{ marginBottom: 24 }}>
-          <h1
-            style={{
-              fontSize: 32,
-              margin: 0,
-              color: "#0f172a",
-            }}
-          >
+          <h1 style={{ fontSize: 32, margin: 0, color: "#0f172a" }}>
             Balance Forrajero
           </h1>
           <p style={{ color: "#64748b", marginTop: 8 }}>
-            Primera versión usable para cargar potreros, rodeo y ver el balance
-            mensual.
+            Versión 2: campo natural, pradera y verdeos por potrero.
           </p>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 16,
-              padding: 16,
-            }}
-          >
-            <h2 style={{ marginTop: 0, fontSize: 20 }}>Establecimiento</h2>
-
+        <div style={topGridStyle}>
+          <div style={panelStyle}>
+            <h2 style={panelTitleStyle}>Establecimiento</h2>
             <div style={{ display: "grid", gap: 12 }}>
               <div>
-                <label style={{ fontSize: 14, color: "#334155" }}>
-                  Nombre
-                </label>
+                <label style={labelStyle}>Nombre</label>
                 <input
                   value={farm.name}
                   onChange={(e) =>
@@ -494,9 +383,7 @@ export default function App() {
               </div>
 
               <div>
-                <label style={{ fontSize: 14, color: "#334155" }}>
-                  Región
-                </label>
+                <label style={labelStyle}>Región</label>
                 <select
                   value={farm.region}
                   onChange={(e) => {
@@ -504,10 +391,11 @@ export default function App() {
                     const firstEnv = getEnvironmentOptions(region)[0] || "";
                     setFarm((prev) => ({ ...prev, region }));
                     setPaddocks((prev) =>
-                      prev.map((p) => ({
-                        ...p,
-                        environment: firstEnv,
-                      }))
+                      prev.map((p) =>
+                        p.resourceType === "Campo natural"
+                          ? { ...p, environment: firstEnv }
+                          : p
+                      )
                     );
                   }}
                   style={inputStyle}
@@ -520,23 +408,9 @@ export default function App() {
             </div>
           </div>
 
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 16,
-              padding: 16,
-            }}
-          >
-            <h2 style={{ marginTop: 0, fontSize: 20 }}>Resumen</h2>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-              }}
-            >
+          <div style={panelStyle}>
+            <h2 style={panelTitleStyle}>Resumen</h2>
+            <div style={summaryGridStyle}>
               <SummaryCard
                 title="Carga actual"
                 value={`${formatNumber(results.currentLoad, 1)} kg PV/ha`}
@@ -557,31 +431,10 @@ export default function App() {
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 16,
-              padding: 16,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <h2 style={{ margin: 0, fontSize: 20 }}>Potreros</h2>
+        <div style={midGridStyle}>
+          <div style={panelStyle}>
+            <div style={panelHeaderRowStyle}>
+              <h2 style={panelTitleStyle}>Potreros</h2>
               <button onClick={addPaddock} style={buttonStyle}>
                 + Agregar
               </button>
@@ -589,27 +442,10 @@ export default function App() {
 
             <div style={{ display: "grid", gap: 12 }}>
               {paddocks.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 14,
-                    padding: 12,
-                    background: "#fff",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1.2fr 0.7fr 1fr auto",
-                      gap: 8,
-                      alignItems: "end",
-                    }}
-                  >
+                <div key={p.id} style={boxStyle}>
+                  <div style={paddockGridStyle}>
                     <div>
-                      <label style={{ fontSize: 13, color: "#334155" }}>
-                        Nombre
-                      </label>
+                      <label style={smallLabelStyle}>Nombre</label>
                       <input
                         value={p.name}
                         onChange={(e) =>
@@ -620,9 +456,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 13, color: "#334155" }}>
-                        Hectáreas
-                      </label>
+                      <label style={smallLabelStyle}>Hectáreas</label>
                       <input
                         type="number"
                         value={p.hectares}
@@ -634,21 +468,48 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 13, color: "#334155" }}>
-                        Ambiente
-                      </label>
+                      <label style={smallLabelStyle}>Recurso</label>
                       <select
-                        value={p.environment}
+                        value={p.resourceType}
                         onChange={(e) =>
-                          updatePaddock(p.id, "environment", e.target.value)
+                          updatePaddock(p.id, "resourceType", e.target.value)
                         }
                         style={inputStyle}
                       >
-                        {environmentOptions.map((env) => (
-                          <option key={env}>{env}</option>
+                        {RESOURCE_TYPES.map((r) => (
+                          <option key={r}>{r}</option>
                         ))}
                       </select>
                     </div>
+
+                    {p.resourceType === "Campo natural" ? (
+                      <div>
+                        <label style={smallLabelStyle}>Ambiente</label>
+                        <select
+                          value={p.environment}
+                          onChange={(e) =>
+                            updatePaddock(p.id, "environment", e.target.value)
+                          }
+                          style={inputStyle}
+                        >
+                          {environmentOptions.map((env) => (
+                            <option key={env}>{env}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "end" }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "#64748b",
+                            paddingBottom: 10,
+                          }}
+                        >
+                          Producción automática
+                        </div>
+                      </div>
+                    )}
 
                     <button
                       onClick={() => removePaddock(p.id)}
@@ -662,23 +523,9 @@ export default function App() {
             </div>
           </div>
 
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 16,
-              padding: 16,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <h2 style={{ margin: 0, fontSize: 20 }}>Rodeo</h2>
+          <div style={panelStyle}>
+            <div style={panelHeaderRowStyle}>
+              <h2 style={panelTitleStyle}>Rodeo</h2>
               <button onClick={addHerdRow} style={buttonStyle}>
                 + Agregar
               </button>
@@ -686,27 +533,10 @@ export default function App() {
 
             <div style={{ display: "grid", gap: 12 }}>
               {herd.map((h) => (
-                <div
-                  key={h.id}
-                  style={{
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 14,
-                    padding: 12,
-                    background: "#fff",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 0.7fr 0.7fr 0.7fr auto",
-                      gap: 8,
-                      alignItems: "end",
-                    }}
-                  >
+                <div key={h.id} style={boxStyle}>
+                  <div style={herdGridStyle}>
                     <div>
-                      <label style={{ fontSize: 13, color: "#334155" }}>
-                        Categoría
-                      </label>
+                      <label style={smallLabelStyle}>Categoría</label>
                       <select
                         value={h.category}
                         onChange={(e) =>
@@ -721,9 +551,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 13, color: "#334155" }}>
-                        Cabezas
-                      </label>
+                      <label style={smallLabelStyle}>Cabezas</label>
                       <input
                         type="number"
                         value={h.heads}
@@ -735,9 +563,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 13, color: "#334155" }}>
-                        Peso
-                      </label>
+                      <label style={smallLabelStyle}>Peso</label>
                       <input
                         type="number"
                         value={h.weight}
@@ -749,9 +575,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 13, color: "#334155" }}>
-                        Consumo %
-                      </label>
+                      <label style={smallLabelStyle}>Consumo %</label>
                       <input
                         type="number"
                         step="0.1"
@@ -776,16 +600,8 @@ export default function App() {
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            borderRadius: 16,
-            padding: 16,
-            marginBottom: 24,
-          }}
-        >
-          <h2 style={{ marginTop: 0, fontSize: 20 }}>Gráfico mensual</h2>
+        <div style={{ ...panelStyle, marginBottom: 24 }}>
+          <h2 style={panelTitleStyle}>Gráfico mensual</h2>
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
               <LineChart data={results.chartData}>
@@ -794,49 +610,18 @@ export default function App() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="oferta"
-                  stroke="#16a34a"
-                  strokeWidth={3}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="demanda"
-                  stroke="#dc2626"
-                  strokeWidth={3}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="balance"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                />
+                <Line type="monotone" dataKey="oferta" stroke="#16a34a" strokeWidth={3} />
+                <Line type="monotone" dataKey="demanda" stroke="#dc2626" strokeWidth={3} />
+                <Line type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            borderRadius: 16,
-            padding: 16,
-          }}
-        >
-          <h2 style={{ marginTop: 0, fontSize: 20 }}>Tabla mensual</h2>
-
+        <div style={panelStyle}>
+          <h2 style={panelTitleStyle}>Tabla mensual</h2>
           <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                background: "#fff",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            >
+            <table style={tableStyle}>
               <thead>
                 <tr style={{ background: "#e2e8f0" }}>
                   <th style={thStyle}>Mes</th>
@@ -849,19 +634,12 @@ export default function App() {
                 {MONTHS.map((m, i) => (
                   <tr key={m.key}>
                     <td style={tdStyle}>{m.label}</td>
-                    <td style={tdStyle}>
-                      {formatNumber(results.offerByMonth[i])}
-                    </td>
-                    <td style={tdStyle}>
-                      {formatNumber(results.demandByMonth[i])}
-                    </td>
+                    <td style={tdStyle}>{formatNumber(results.offerByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.demandByMonth[i])}</td>
                     <td
                       style={{
                         ...tdStyle,
-                        color:
-                          results.balanceByMonth[i] < 0
-                            ? "#dc2626"
-                            : "#16a34a",
+                        color: results.balanceByMonth[i] < 0 ? "#dc2626" : "#16a34a",
                         fontWeight: 600,
                       }}
                     >
@@ -877,6 +655,101 @@ export default function App() {
     </div>
   );
 }
+
+const pageStyle = {
+  minHeight: "100vh",
+  background: "#f1f5f9",
+  padding: 24,
+  fontFamily:
+    "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+};
+
+const containerStyle = {
+  maxWidth: 1200,
+  margin: "0 auto",
+  background: "#ffffff",
+  borderRadius: 24,
+  padding: 24,
+  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+};
+
+const topGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 16,
+  marginBottom: 24,
+};
+
+const midGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 16,
+  marginBottom: 24,
+};
+
+const panelStyle = {
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: 16,
+  padding: 16,
+};
+
+const panelTitleStyle = {
+  marginTop: 0,
+  marginBottom: 12,
+  fontSize: 20,
+};
+
+const panelHeaderRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 12,
+};
+
+const summaryGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 12,
+};
+
+const summaryCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  borderRadius: 16,
+  padding: 16,
+};
+
+const boxStyle = {
+  border: "1px solid #cbd5e1",
+  borderRadius: 14,
+  padding: 12,
+  background: "#fff",
+};
+
+const paddockGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1.1fr 0.7fr 1fr 1fr auto",
+  gap: 8,
+  alignItems: "end",
+};
+
+const herdGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 0.7fr 0.7fr 0.7fr auto",
+  gap: 8,
+  alignItems: "end",
+};
+
+const labelStyle = {
+  fontSize: 14,
+  color: "#334155",
+};
+
+const smallLabelStyle = {
+  fontSize: 13,
+  color: "#334155",
+};
 
 const inputStyle = {
   width: "100%",
@@ -905,6 +778,14 @@ const dangerButtonStyle = {
   color: "#b91c1c",
   fontWeight: 600,
   cursor: "pointer",
+};
+
+const tableStyle = {
+  width: "100%",
+  borderCollapse: "collapse",
+  background: "#fff",
+  borderRadius: 12,
+  overflow: "hidden",
 };
 
 const thStyle = {
