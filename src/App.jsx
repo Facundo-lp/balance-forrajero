@@ -11,19 +11,24 @@ import {
 } from "recharts";
 
 const MONTHS = [
-  { key: "ene", label: "Ene", days: 31 },
-  { key: "feb", label: "Feb", days: 28 },
-  { key: "mar", label: "Mar", days: 31 },
-  { key: "abr", label: "Abr", days: 30 },
-  { key: "may", label: "May", days: 31 },
-  { key: "jun", label: "Jun", days: 30 },
-  { key: "jul", label: "Jul", days: 31 },
-  { key: "ago", label: "Ago", days: 31 },
-  { key: "sep", label: "Sep", days: 30 },
-  { key: "oct", label: "Oct", days: 31 },
-  { key: "nov", label: "Nov", days: 30 },
-  { key: "dic", label: "Dic", days: 31 },
+  { key: "ene", label: "Ene", days: 31, index: 1 },
+  { key: "feb", label: "Feb", days: 28, index: 2 },
+  { key: "mar", label: "Mar", days: 31, index: 3 },
+  { key: "abr", label: "Abr", days: 30, index: 4 },
+  { key: "may", label: "May", days: 31, index: 5 },
+  { key: "jun", label: "Jun", days: 30, index: 6 },
+  { key: "jul", label: "Jul", days: 31, index: 7 },
+  { key: "ago", label: "Ago", days: 31, index: 8 },
+  { key: "sep", label: "Sep", days: 30, index: 9 },
+  { key: "oct", label: "Oct", days: 31, index: 10 },
+  { key: "nov", label: "Nov", days: 30, index: 11 },
+  { key: "dic", label: "Dic", days: 31, index: 12 },
 ];
+
+const MONTH_OPTIONS = MONTHS.map((m) => ({
+  value: m.index,
+  label: m.label,
+}));
 
 const REGIONS = [
   "Sierras del Este",
@@ -117,28 +122,58 @@ const RESOURCE_TYPES = [
 ];
 
 const SEEDED_RESOURCE_TABLE = {
-  "Pradera": {
+  Pradera: {
     annual: 8500,
     utilization: 0.65,
     monthly: {
-      ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5,
-      jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11
+      ene: 9,
+      feb: 7,
+      mar: 7,
+      abr: 7,
+      may: 6,
+      jun: 5,
+      jul: 5,
+      ago: 7,
+      sep: 10,
+      oct: 13,
+      nov: 13,
+      dic: 11,
     },
   },
   "Verdeo de invierno": {
     annual: 9500,
     utilization: 0.7,
     monthly: {
-      ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15,
-      jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0
+      ene: 0,
+      feb: 0,
+      mar: 0,
+      abr: 0,
+      may: 8,
+      jun: 15,
+      jul: 20,
+      ago: 22,
+      sep: 20,
+      oct: 10,
+      nov: 5,
+      dic: 0,
     },
   },
   "Verdeo de verano": {
     annual: 13000,
     utilization: 0.7,
     monthly: {
-      ene: 20, feb: 18, mar: 10, abr: 3, may: 0, jun: 0,
-      jul: 0, ago: 0, sep: 0, oct: 0, nov: 14, dic: 35
+      ene: 20,
+      feb: 18,
+      mar: 10,
+      abr: 3,
+      may: 0,
+      jun: 0,
+      jul: 0,
+      ago: 0,
+      sep: 0,
+      oct: 0,
+      nov: 14,
+      dic: 35,
     },
   },
 };
@@ -212,6 +247,7 @@ export default function App() {
       hectares: 100,
       resourceType: "Campo natural",
       environment: "Serrano medio",
+      startMonth: 1,
     },
   ]);
 
@@ -236,6 +272,7 @@ export default function App() {
         hectares: 0,
         resourceType: "Campo natural",
         environment: getEnvironmentOptions(farm.region)[0] || "",
+        startMonth: 1,
       },
     ]);
   };
@@ -247,9 +284,13 @@ export default function App() {
         const updated = { ...p, [key]: value };
         if (key === "resourceType" && value !== "Campo natural") {
           updated.environment = "";
+          if (value === "Pradera") updated.startMonth = 7;
+          if (value === "Verdeo de invierno") updated.startMonth = 5;
+          if (value === "Verdeo de verano") updated.startMonth = 12;
         }
         if (key === "resourceType" && value === "Campo natural") {
           updated.environment = getEnvironmentOptions(farm.region)[0] || "";
+          updated.startMonth = 1;
         }
         return updated;
       })
@@ -299,6 +340,8 @@ export default function App() {
   const results = useMemo(() => {
     const offerByMonth = MONTHS.map((m) => {
       return paddocks.reduce((sum, p) => {
+        if (m.index < n(p.startMonth)) return sum;
+
         if (p.resourceType === "Campo natural") {
           const row = getFieldNaturalRow(farm.region, p.environment);
           if (!row) return sum;
@@ -363,7 +406,7 @@ export default function App() {
             Balance Forrajero
           </h1>
           <p style={{ color: "#64748b", marginTop: 8 }}>
-            Versión 2: campo natural, pradera y verdeos por potrero.
+            Versión 3: recursos por potrero y mes de inicio.
           </p>
         </div>
 
@@ -443,7 +486,7 @@ export default function App() {
             <div style={{ display: "grid", gap: 12 }}>
               {paddocks.map((p) => (
                 <div key={p.id} style={boxStyle}>
-                  <div style={paddockGridStyle}>
+                  <div style={paddockGridStyleV2}>
                     <div>
                       <label style={smallLabelStyle}>Nombre</label>
                       <input
@@ -498,18 +541,32 @@ export default function App() {
                         </select>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "end" }}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#64748b",
-                            paddingBottom: 10,
-                          }}
-                        >
-                          Producción automática
-                        </div>
+                      <div>
+                        <label style={smallLabelStyle}>Ambiente</label>
+                        <input
+                          value="No aplica"
+                          disabled
+                          style={{ ...inputStyle, background: "#f1f5f9" }}
+                        />
                       </div>
                     )}
+
+                    <div>
+                      <label style={smallLabelStyle}>Mes inicio</label>
+                      <select
+                        value={p.startMonth}
+                        onChange={(e) =>
+                          updatePaddock(p.id, "startMonth", Number(e.target.value))
+                        }
+                        style={inputStyle}
+                      >
+                        {MONTH_OPTIONS.map((m) => (
+                          <option key={m.value} value={m.value}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
                     <button
                       onClick={() => removePaddock(p.id)}
@@ -727,9 +784,9 @@ const boxStyle = {
   background: "#fff",
 };
 
-const paddockGridStyle = {
+const paddockGridStyleV2 = {
   display: "grid",
-  gridTemplateColumns: "1.1fr 0.7fr 1fr 1fr auto",
+  gridTemplateColumns: "1.1fr 0.7fr 1fr 1fr 0.8fr auto",
   gap: 8,
   alignItems: "end",
 };
