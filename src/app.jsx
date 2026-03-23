@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -6,7 +6,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend
+  Legend,
+  ResponsiveContainer,
 } from "recharts";
 
 const MONTHS = [
@@ -21,7 +22,28 @@ const MONTHS = [
   { key: "sep", label: "Sep", days: 30 },
   { key: "oct", label: "Oct", days: 31 },
   { key: "nov", label: "Nov", days: 30 },
-  { key: "dic", label: "Dic", days: 31 }
+  { key: "dic", label: "Dic", days: 31 },
+];
+
+const REGIONS = [
+  "Sierras del Este",
+  "Lomadas del Este",
+  "Basalto",
+  "Cristalino / Centro Sur",
+  "Areniscas",
+  "Cretácico",
+  "Litoral",
+  "Litoral Sur",
+  "Llanuras del Este / Cuenca Laguna Merín",
+];
+
+const ANIMAL_CATEGORIES = [
+  { label: "Vaca cría", intake: 2.3, weight: 400 },
+  { label: "Ternero", intake: 2.8, weight: 110 },
+  { label: "Vaquillona", intake: 2.5, weight: 260 },
+  { label: "Novillo recría", intake: 2.5, weight: 320 },
+  { label: "Novillo engorde", intake: 2.7, weight: 420 },
+  { label: "Vaca de invernada", intake: 2.3, weight: 400 },
 ];
 
 const FIELD_NATURAL_TABLE = [
@@ -33,7 +55,7 @@ const FIELD_NATURAL_TABLE = [
     winter: 5,
     spring: 26,
     summer: 41,
-    utilization: 0.5
+    utilization: 0.5,
   },
   {
     region: "Sierras del Este",
@@ -43,7 +65,7 @@ const FIELD_NATURAL_TABLE = [
     winter: 7,
     spring: 28,
     summer: 39,
-    utilization: 0.52
+    utilization: 0.52,
   },
   {
     region: "Sierras del Este",
@@ -53,13 +75,150 @@ const FIELD_NATURAL_TABLE = [
     winter: 9,
     spring: 30,
     summer: 37,
-    utilization: 0.55
-  }
+    utilization: 0.55,
+  },
+  {
+    region: "Lomadas del Este",
+    environment: "General",
+    annual: 3426,
+    autumn: 26,
+    winter: 15,
+    spring: 35,
+    summer: 24,
+    utilization: 0.55,
+  },
+  {
+    region: "Basalto",
+    environment: "Superficial",
+    annual: 2885,
+    autumn: 28,
+    winter: 15,
+    spring: 40,
+    summer: 17,
+    utilization: 0.55,
+  },
+  {
+    region: "Basalto",
+    environment: "Profundo",
+    annual: 4000,
+    autumn: 25,
+    winter: 12,
+    spring: 44,
+    summer: 19,
+    utilization: 0.6,
+  },
+  {
+    region: "Cristalino / Centro Sur",
+    environment: "Superficial",
+    annual: 2316,
+    autumn: 22,
+    winter: 22,
+    spring: 21,
+    summer: 35,
+    utilization: 0.52,
+  },
+  {
+    region: "Cristalino / Centro Sur",
+    environment: "Brunosol subeútrico",
+    annual: 3206,
+    autumn: 22,
+    winter: 18,
+    spring: 27,
+    summer: 33,
+    utilization: 0.55,
+  },
+  {
+    region: "Cristalino / Centro Sur",
+    environment: "Brunosol eútrico",
+    annual: 3665,
+    autumn: 21,
+    winter: 16,
+    spring: 28,
+    summer: 35,
+    utilization: 0.58,
+  },
+  {
+    region: "Areniscas",
+    environment: "Ladera alta",
+    annual: 5144,
+    autumn: 13,
+    winter: 7,
+    spring: 31,
+    summer: 49,
+    utilization: 0.58,
+  },
+  {
+    region: "Cretácico",
+    environment: "Agrio",
+    annual: 5530,
+    autumn: 23,
+    winter: 15,
+    spring: 28,
+    summer: 34,
+    utilization: 0.6,
+  },
+  {
+    region: "Litoral",
+    environment: "General",
+    annual: 6000,
+    autumn: 24,
+    winter: 16,
+    spring: 34,
+    summer: 26,
+    utilization: 0.62,
+  },
+  {
+    region: "Litoral Sur",
+    environment: "General agrícola-ganadero",
+    annual: 7000,
+    autumn: 25,
+    winter: 18,
+    spring: 36,
+    summer: 21,
+    utilization: 0.65,
+  },
+  {
+    region: "Llanuras del Este / Cuenca Laguna Merín",
+    environment: "Tendido alto",
+    annual: 3000,
+    autumn: 22,
+    winter: 10,
+    spring: 28,
+    summer: 40,
+    utilization: 0.52,
+  },
+  {
+    region: "Llanuras del Este / Cuenca Laguna Merín",
+    environment: "Plano medio",
+    annual: 3800,
+    autumn: 21,
+    winter: 11,
+    spring: 30,
+    summer: 38,
+    utilization: 0.55,
+  },
+  {
+    region: "Llanuras del Este / Cuenca Laguna Merín",
+    environment: "Bajo dulce/húmedo",
+    annual: 4500,
+    autumn: 20,
+    winter: 14,
+    spring: 31,
+    summer: 35,
+    utilization: 0.58,
+  },
 ];
 
 function n(v) {
   const x = Number(v);
   return Number.isFinite(x) ? x : 0;
+}
+
+function formatNumber(v, decimals = 0) {
+  return new Intl.NumberFormat("es-UY", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(v || 0);
 }
 
 function seasonToMonthly(row) {
@@ -75,222 +234,688 @@ function seasonToMonthly(row) {
     sep: row.spring / 3,
     oct: row.spring / 3,
     nov: row.spring / 3,
-    dic: row.summer / 3
+    dic: row.summer / 3,
   };
 }
 
-function getRow(region, env) {
+function getFieldNaturalRow(region, environment) {
   return (
     FIELD_NATURAL_TABLE.find(
-      r => r.region === region && r.environment === env
-    ) || FIELD_NATURAL_TABLE[0]
+      (r) => r.region === region && r.environment === environment
+    ) || FIELD_NATURAL_TABLE.find((r) => r.region === region)
   );
 }
 
-export default function BalanceForrajeroWebApp() {
+function getEnvironmentOptions(region) {
+  return FIELD_NATURAL_TABLE.filter((r) => r.region === region).map(
+    (r) => r.environment
+  );
+}
 
+function SummaryCard({ title, value, subtitle }) {
+  return (
+    <div
+      style={{
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        borderRadius: 16,
+        padding: 16,
+      }}
+    >
+      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: "#0f172a" }}>
+        {value}
+      </div>
+      {subtitle ? (
+        <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
+          {subtitle}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default function App() {
   const [farm, setFarm] = useState({
     name: "Mi establecimiento",
-    region: "Sierras del Este"
+    region: "Sierras del Este",
   });
 
   const [paddocks, setPaddocks] = useState([
     {
       id: 1,
-      name: "Campo natural",
+      name: "Potrero 1",
       hectares: 100,
-      environment: "Serrano medio"
-    }
+      environment: "Serrano medio",
+    },
   ]);
 
   const [herd, setHerd] = useState([
-    { id: 1, category: "Vaca cría", heads: 100, weight: 400, intake: 2.3 }
+    {
+      id: 1,
+      category: "Vaca cría",
+      heads: 100,
+      weight: 400,
+      intake: 2.3,
+    },
   ]);
 
-  useEffect(() => {
-    localStorage.setItem(
-      "bf_autosave",
-      JSON.stringify({ farm, paddocks, herd })
+  const environmentOptions = getEnvironmentOptions(farm.region);
+
+  const addPaddock = () => {
+    setPaddocks((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        name: `Potrero ${prev.length + 1}`,
+        hectares: 0,
+        environment: getEnvironmentOptions(farm.region)[0] || "",
+      },
+    ]);
+  };
+
+  const updatePaddock = (id, key, value) => {
+    setPaddocks((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [key]: value } : p))
     );
-  }, [farm, paddocks, herd]);
+  };
 
-  const monthlyResults = useMemo(() => {
+  const removePaddock = (id) => {
+    setPaddocks((prev) => prev.filter((p) => p.id !== id));
+  };
 
-    const paddockOffers = paddocks.map(p => {
+  const addHerdRow = () => {
+    const a = ANIMAL_CATEGORIES[0];
+    setHerd((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        category: a.label,
+        heads: 0,
+        weight: a.weight,
+        intake: a.intake,
+      },
+    ]);
+  };
 
-      const row = getRow(farm.region, p.environment);
+  const updateHerd = (id, key, value) => {
+    setHerd((prev) =>
+      prev.map((h) => {
+        if (h.id !== id) return h;
 
-      const dist = seasonToMonthly(row);
+        if (key === "category") {
+          const found = ANIMAL_CATEGORIES.find((a) => a.label === value);
+          return {
+            ...h,
+            category: value,
+            weight: found?.weight ?? h.weight,
+            intake: found?.intake ?? h.intake,
+          };
+        }
 
-      return MONTHS.map(m => {
+        return { ...h, [key]: value };
+      })
+    );
+  };
 
-        const pct = dist[m.key] || 0;
+  const removeHerd = (id) => {
+    setHerd((prev) => prev.filter((h) => h.id !== id));
+  };
 
-        const perHa = row.annual * (pct / 100);
+  const results = useMemo(() => {
+    const offerByMonth = MONTHS.map((m, monthIndex) => {
+      return paddocks.reduce((sum, p) => {
+        const row = getFieldNaturalRow(farm.region, p.environment);
+        if (!row) return sum;
 
-        return perHa * n(p.hectares) * row.utilization;
+        const dist = seasonToMonthly(row);
+        const pct = n(dist[m.key]);
+        const monthlyPerHa = row.annual * (pct / 100);
+        const offer = monthlyPerHa * n(p.hectares) * row.utilization;
 
-      });
-
+        return sum + offer;
+      }, 0);
     });
 
-    const offerByMonth = MONTHS.map((_, i) =>
-      paddockOffers.reduce((s, p) => s + p[i], 0)
-    );
-
-    const demandByMonth = MONTHS.map(m =>
-      herd.reduce(
-        (sum, h) =>
-          sum +
-          n(h.heads) *
-            n(h.weight) *
-            (n(h.intake) / 100) *
-            m.days,
-        0
-      )
-    );
+    const demandByMonth = MONTHS.map((m) => {
+      return herd.reduce((sum, h) => {
+        const daily =
+          n(h.heads) * n(h.weight) * (n(h.intake) / 100);
+        return sum + daily * m.days;
+      }, 0);
+    });
 
     const balanceByMonth = MONTHS.map(
       (_, i) => offerByMonth[i] - demandByMonth[i]
     );
 
-    const totalPV = herd.reduce(
-      (s, h) => s + n(h.heads) * n(h.weight),
-      0
-    );
+    const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
+    const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
+    const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
 
-    const totalArea = paddocks.reduce(
-      (s, p) => s + n(p.hectares),
+    const totalPV = herd.reduce(
+      (sum, h) => sum + n(h.heads) * n(h.weight),
       0
     );
+    const totalArea = paddocks.reduce((sum, p) => sum + n(p.hectares), 0);
+
+    const currentLoad = totalArea > 0 ? totalPV / totalArea : 0;
+
+    const chartData = MONTHS.map((m, i) => ({
+      mes: m.label,
+      oferta: Math.round(offerByMonth[i]),
+      demanda: Math.round(demandByMonth[i]),
+      balance: Math.round(balanceByMonth[i]),
+    }));
 
     return {
       offerByMonth,
       demandByMonth,
       balanceByMonth,
+      annualOffer,
+      annualDemand,
+      annualBalance,
       totalPV,
-      totalArea
+      totalArea,
+      currentLoad,
+      chartData,
     };
-
   }, [farm.region, paddocks, herd]);
 
-  const exportCSV = () => {
-
-    const rows = MONTHS.map((m, i) => [
-      m.label,
-      monthlyResults.offerByMonth[i],
-      monthlyResults.demandByMonth[i],
-      monthlyResults.balanceByMonth[i]
-    ]);
-
-    const csv = [["Mes", "Oferta", "Demanda", "Balance"], ...rows]
-      .map(e => e.join(","))
-      .join("\n");
-
-    const blob = new Blob([csv]);
-
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-
-    a.href = url;
-
-    a.download = "balance_forrajero.csv";
-
-    a.click();
-
-  };
-
   return (
-
-    <div style={{ padding: 40, maxWidth: 900, margin: "auto" }}>
-
-      <h1>App Balance Forrajero</h1>
-
-      <button onClick={exportCSV}>Exportar CSV</button>
-
-      <h2>Resumen</h2>
-
-      <div style={{ display: "flex", gap: 20 }}>
-
-        <div>
-          Carga actual
-          <br />
-          {(
-            monthlyResults.totalPV /
-            monthlyResults.totalArea
-          ).toFixed(1)}{" "}
-          kg PV/ha
-        </div>
-
-        <div>
-          Oferta anual
-          <br />
-          {Math.round(
-            monthlyResults.offerByMonth.reduce((a, b) => a + b, 0)
-          )}{" "}
-          kg MS
-        </div>
-
-        <div>
-          Demanda anual
-          <br />
-          {Math.round(
-            monthlyResults.demandByMonth.reduce((a, b) => a + b, 0)
-          )}{" "}
-          kg MS
-        </div>
-
-      </div>
-
-      <h2>Gráfico</h2>
-
-      <LineChart
-        width={800}
-        height={300}
-        data={MONTHS.map((m, i) => ({
-          mes: m.label,
-          oferta: monthlyResults.offerByMonth[i],
-          demanda: monthlyResults.demandByMonth[i],
-          balance: monthlyResults.balanceByMonth[i]
-        }))}
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f1f5f9",
+        padding: 24,
+        fontFamily:
+          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          background: "#ffffff",
+          borderRadius: 24,
+          padding: 24,
+          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+        }}
       >
+        <div style={{ marginBottom: 24 }}>
+          <h1
+            style={{
+              fontSize: 32,
+              margin: 0,
+              color: "#0f172a",
+            }}
+          >
+            Balance Forrajero
+          </h1>
+          <p style={{ color: "#64748b", marginTop: 8 }}>
+            Primera versión usable para cargar potreros, rodeo y ver el balance
+            mensual.
+          </p>
+        </div>
 
-        <CartesianGrid strokeDasharray="3 3" />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <h2 style={{ marginTop: 0, fontSize: 20 }}>Establecimiento</h2>
 
-        <XAxis dataKey="mes" />
+            <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 14, color: "#334155" }}>
+                  Nombre
+                </label>
+                <input
+                  value={farm.name}
+                  onChange={(e) =>
+                    setFarm((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  style={inputStyle}
+                />
+              </div>
 
-        <YAxis />
+              <div>
+                <label style={{ fontSize: 14, color: "#334155" }}>
+                  Región
+                </label>
+                <select
+                  value={farm.region}
+                  onChange={(e) => {
+                    const region = e.target.value;
+                    const firstEnv = getEnvironmentOptions(region)[0] || "";
+                    setFarm((prev) => ({ ...prev, region }));
+                    setPaddocks((prev) =>
+                      prev.map((p) => ({
+                        ...p,
+                        environment: firstEnv,
+                      }))
+                    );
+                  }}
+                  style={inputStyle}
+                >
+                  {REGIONS.map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
 
-        <Tooltip />
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <h2 style={{ marginTop: 0, fontSize: 20 }}>Resumen</h2>
 
-        <Legend />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
+              <SummaryCard
+                title="Carga actual"
+                value={`${formatNumber(results.currentLoad, 1)} kg PV/ha`}
+              />
+              <SummaryCard
+                title="Oferta anual"
+                value={`${formatNumber(results.annualOffer)} kg MS`}
+              />
+              <SummaryCard
+                title="Demanda anual"
+                value={`${formatNumber(results.annualDemand)} kg MS`}
+              />
+              <SummaryCard
+                title="Balance anual"
+                value={`${formatNumber(results.annualBalance)} kg MS`}
+              />
+            </div>
+          </div>
+        </div>
 
-        <Line
-          type="monotone"
-          dataKey="oferta"
-          stroke="#16a34a"
-          strokeWidth={3}
-        />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: 20 }}>Potreros</h2>
+              <button onClick={addPaddock} style={buttonStyle}>
+                + Agregar
+              </button>
+            </div>
 
-        <Line
-          type="monotone"
-          dataKey="demanda"
-          stroke="#dc2626"
-          strokeWidth={3}
-        />
+            <div style={{ display: "grid", gap: 12 }}>
+              {paddocks.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 14,
+                    padding: 12,
+                    background: "#fff",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1.2fr 0.7fr 1fr auto",
+                      gap: 8,
+                      alignItems: "end",
+                    }}
+                  >
+                    <div>
+                      <label style={{ fontSize: 13, color: "#334155" }}>
+                        Nombre
+                      </label>
+                      <input
+                        value={p.name}
+                        onChange={(e) =>
+                          updatePaddock(p.id, "name", e.target.value)
+                        }
+                        style={inputStyle}
+                      />
+                    </div>
 
-        <Line
-          type="monotone"
-          dataKey="balance"
-          stroke="#2563eb"
-          strokeWidth={3}
-        />
+                    <div>
+                      <label style={{ fontSize: 13, color: "#334155" }}>
+                        Hectáreas
+                      </label>
+                      <input
+                        type="number"
+                        value={p.hectares}
+                        onChange={(e) =>
+                          updatePaddock(p.id, "hectares", e.target.value)
+                        }
+                        style={inputStyle}
+                      />
+                    </div>
 
-      </LineChart>
+                    <div>
+                      <label style={{ fontSize: 13, color: "#334155" }}>
+                        Ambiente
+                      </label>
+                      <select
+                        value={p.environment}
+                        onChange={(e) =>
+                          updatePaddock(p.id, "environment", e.target.value)
+                        }
+                        style={inputStyle}
+                      >
+                        {environmentOptions.map((env) => (
+                          <option key={env}>{env}</option>
+                        ))}
+                      </select>
+                    </div>
 
+                    <button
+                      onClick={() => removePaddock(p.id)}
+                      style={dangerButtonStyle}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: 20 }}>Rodeo</h2>
+              <button onClick={addHerdRow} style={buttonStyle}>
+                + Agregar
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              {herd.map((h) => (
+                <div
+                  key={h.id}
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 14,
+                    padding: 12,
+                    background: "#fff",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 0.7fr 0.7fr 0.7fr auto",
+                      gap: 8,
+                      alignItems: "end",
+                    }}
+                  >
+                    <div>
+                      <label style={{ fontSize: 13, color: "#334155" }}>
+                        Categoría
+                      </label>
+                      <select
+                        value={h.category}
+                        onChange={(e) =>
+                          updateHerd(h.id, "category", e.target.value)
+                        }
+                        style={inputStyle}
+                      >
+                        {ANIMAL_CATEGORIES.map((a) => (
+                          <option key={a.label}>{a.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 13, color: "#334155" }}>
+                        Cabezas
+                      </label>
+                      <input
+                        type="number"
+                        value={h.heads}
+                        onChange={(e) =>
+                          updateHerd(h.id, "heads", e.target.value)
+                        }
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 13, color: "#334155" }}>
+                        Peso
+                      </label>
+                      <input
+                        type="number"
+                        value={h.weight}
+                        onChange={(e) =>
+                          updateHerd(h.id, "weight", e.target.value)
+                        }
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 13, color: "#334155" }}>
+                        Consumo %
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={h.intake}
+                        onChange={(e) =>
+                          updateHerd(h.id, "intake", e.target.value)
+                        }
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => removeHerd(h.id)}
+                      style={dangerButtonStyle}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: 16,
+            padding: 16,
+            marginBottom: 24,
+          }}
+        >
+          <h2 style={{ marginTop: 0, fontSize: 20 }}>Gráfico mensual</h2>
+          <div style={{ width: "100%", height: 360 }}>
+            <ResponsiveContainer>
+              <LineChart data={results.chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mes" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="oferta"
+                  stroke="#16a34a"
+                  strokeWidth={3}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="demanda"
+                  stroke="#dc2626"
+                  strokeWidth={3}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="balance"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: 16,
+            padding: 16,
+          }}
+        >
+          <h2 style={{ marginTop: 0, fontSize: 20 }}>Tabla mensual</h2>
+
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                background: "#fff",
+                borderRadius: 12,
+                overflow: "hidden",
+              }}
+            >
+              <thead>
+                <tr style={{ background: "#e2e8f0" }}>
+                  <th style={thStyle}>Mes</th>
+                  <th style={thStyle}>Oferta</th>
+                  <th style={thStyle}>Demanda</th>
+                  <th style={thStyle}>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MONTHS.map((m, i) => (
+                  <tr key={m.key}>
+                    <td style={tdStyle}>{m.label}</td>
+                    <td style={tdStyle}>
+                      {formatNumber(results.offerByMonth[i])}
+                    </td>
+                    <td style={tdStyle}>
+                      {formatNumber(results.demandByMonth[i])}
+                    </td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        color:
+                          results.balanceByMonth[i] < 0
+                            ? "#dc2626"
+                            : "#16a34a",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {formatNumber(results.balanceByMonth[i])}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
-
   );
-
 }
+
+const inputStyle = {
+  width: "100%",
+  marginTop: 4,
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  boxSizing: "border-box",
+};
+
+const buttonStyle = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "none",
+  background: "#0f172a",
+  color: "#fff",
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const dangerButtonStyle = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "none",
+  background: "#fee2e2",
+  color: "#b91c1c",
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const thStyle = {
+  textAlign: "left",
+  padding: 12,
+  fontSize: 14,
+  color: "#0f172a",
+};
+
+const tdStyle = {
+  padding: 12,
+  borderTop: "1px solid #e2e8f0",
+  fontSize: 14,
+  color: "#334155",
+};
