@@ -139,6 +139,8 @@ const SEEDED_RESOURCE_TABLE = {
       nov: 13,
       dic: 11,
     },
+    defaultStartMonth: 7,
+    defaultEndMonth: 12,
   },
   "Verdeo de invierno": {
     annual: 9500,
@@ -157,6 +159,8 @@ const SEEDED_RESOURCE_TABLE = {
       nov: 5,
       dic: 0,
     },
+    defaultStartMonth: 5,
+    defaultEndMonth: 10,
   },
   "Verdeo de verano": {
     annual: 13000,
@@ -175,6 +179,8 @@ const SEEDED_RESOURCE_TABLE = {
       nov: 14,
       dic: 35,
     },
+    defaultStartMonth: 11,
+    defaultEndMonth: 3,
   },
 };
 
@@ -221,6 +227,19 @@ function getEnvironmentOptions(region) {
   );
 }
 
+function monthIsActive(monthIndex, startMonth, endMonth) {
+  const start = n(startMonth);
+  const end = n(endMonth);
+
+  if (!start || !end) return true;
+
+  if (start <= end) {
+    return monthIndex >= start && monthIndex <= end;
+  }
+
+  return monthIndex >= start || monthIndex <= end;
+}
+
 function SummaryCard({ title, value }) {
   return (
     <div style={summaryCardStyle}>
@@ -248,6 +267,7 @@ export default function App() {
       resourceType: "Campo natural",
       environment: "Serrano medio",
       startMonth: 1,
+      endMonth: 12,
     },
   ]);
 
@@ -273,6 +293,7 @@ export default function App() {
         resourceType: "Campo natural",
         environment: getEnvironmentOptions(farm.region)[0] || "",
         startMonth: 1,
+        endMonth: 12,
       },
     ]);
   };
@@ -281,17 +302,23 @@ export default function App() {
     setPaddocks((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
+
         const updated = { ...p, [key]: value };
-        if (key === "resourceType" && value !== "Campo natural") {
-          updated.environment = "";
-          if (value === "Pradera") updated.startMonth = 7;
-          if (value === "Verdeo de invierno") updated.startMonth = 5;
-          if (value === "Verdeo de verano") updated.startMonth = 12;
+
+        if (key === "resourceType") {
+          if (value === "Campo natural") {
+            updated.environment = getEnvironmentOptions(farm.region)[0] || "";
+            updated.startMonth = 1;
+            updated.endMonth = 12;
+          } else {
+            updated.environment = "";
+            updated.startMonth =
+              SEEDED_RESOURCE_TABLE[value]?.defaultStartMonth ?? 1;
+            updated.endMonth =
+              SEEDED_RESOURCE_TABLE[value]?.defaultEndMonth ?? 12;
+          }
         }
-        if (key === "resourceType" && value === "Campo natural") {
-          updated.environment = getEnvironmentOptions(farm.region)[0] || "";
-          updated.startMonth = 1;
-        }
+
         return updated;
       })
     );
@@ -340,7 +367,7 @@ export default function App() {
   const results = useMemo(() => {
     const offerByMonth = MONTHS.map((m) => {
       return paddocks.reduce((sum, p) => {
-        if (m.index < n(p.startMonth)) return sum;
+        if (!monthIsActive(m.index, p.startMonth, p.endMonth)) return sum;
 
         if (p.resourceType === "Campo natural") {
           const row = getFieldNaturalRow(farm.region, p.environment);
@@ -406,7 +433,7 @@ export default function App() {
             Balance Forrajero
           </h1>
           <p style={{ color: "#64748b", marginTop: 8 }}>
-            Versión 3: recursos por potrero y mes de inicio.
+            Versión 4: recursos por potrero, mes de inicio y mes de fin.
           </p>
         </div>
 
@@ -486,7 +513,7 @@ export default function App() {
             <div style={{ display: "grid", gap: 12 }}>
               {paddocks.map((p) => (
                 <div key={p.id} style={boxStyle}>
-                  <div style={paddockGridStyleV2}>
+                  <div style={paddockGridStyleV3}>
                     <div>
                       <label style={smallLabelStyle}>Nombre</label>
                       <input
@@ -556,7 +583,28 @@ export default function App() {
                       <select
                         value={p.startMonth}
                         onChange={(e) =>
-                          updatePaddock(p.id, "startMonth", Number(e.target.value))
+                          updatePaddock(
+                            p.id,
+                            "startMonth",
+                            Number(e.target.value)
+                          )
+                        }
+                        style={inputStyle}
+                      >
+                        {MONTH_OPTIONS.map((m) => (
+                          <option key={m.value} value={m.value}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={smallLabelStyle}>Mes fin</label>
+                      <select
+                        value={p.endMonth}
+                        onChange={(e) =>
+                          updatePaddock(p.id, "endMonth", Number(e.target.value))
                         }
                         style={inputStyle}
                       >
@@ -667,9 +715,24 @@ export default function App() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="oferta" stroke="#16a34a" strokeWidth={3} />
-                <Line type="monotone" dataKey="demanda" stroke="#dc2626" strokeWidth={3} />
-                <Line type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={3} />
+                <Line
+                  type="monotone"
+                  dataKey="oferta"
+                  stroke="#16a34a"
+                  strokeWidth={3}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="demanda"
+                  stroke="#dc2626"
+                  strokeWidth={3}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="balance"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -691,12 +754,19 @@ export default function App() {
                 {MONTHS.map((m, i) => (
                   <tr key={m.key}>
                     <td style={tdStyle}>{m.label}</td>
-                    <td style={tdStyle}>{formatNumber(results.offerByMonth[i])}</td>
-                    <td style={tdStyle}>{formatNumber(results.demandByMonth[i])}</td>
+                    <td style={tdStyle}>
+                      {formatNumber(results.offerByMonth[i])}
+                    </td>
+                    <td style={tdStyle}>
+                      {formatNumber(results.demandByMonth[i])}
+                    </td>
                     <td
                       style={{
                         ...tdStyle,
-                        color: results.balanceByMonth[i] < 0 ? "#dc2626" : "#16a34a",
+                        color:
+                          results.balanceByMonth[i] < 0
+                            ? "#dc2626"
+                            : "#16a34a",
                         fontWeight: 600,
                       }}
                     >
@@ -784,9 +854,9 @@ const boxStyle = {
   background: "#fff",
 };
 
-const paddockGridStyleV2 = {
+const paddockGridStyleV3 = {
   display: "grid",
-  gridTemplateColumns: "1.1fr 0.7fr 1fr 1fr 0.8fr auto",
+  gridTemplateColumns: "1.05fr 0.65fr 1fr 1fr 0.8fr 0.8fr auto",
   gap: 8,
   alignItems: "end",
 };
