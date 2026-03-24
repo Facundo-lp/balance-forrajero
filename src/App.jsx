@@ -205,67 +205,85 @@ const FIELD_NATURAL_TABLE = [
   },
 ];
 
-const SEEDED_RESOURCE_TABLE = {
-  Pradera: {
-    annual: 8500,
-    monthly: {
-      ene: 9,
-      feb: 7,
-      mar: 7,
-      abr: 7,
-      may: 6,
-      jun: 5,
-      jul: 5,
-      ago: 7,
-      sep: 10,
-      oct: 13,
-      nov: 13,
-      dic: 11,
+const SEEDED_SUBTYPES = {
+  Pradera: [
+    {
+      name: "Festuca + trébol blanco + lotus",
+      annual: 8500,
+      monthly: { ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11 },
+      defaultStartMonth: 7,
+      defaultEndMonth: 12,
+      defaultEfficiency: 65,
     },
-    defaultStartMonth: 7,
-    defaultEndMonth: 12,
-    defaultEfficiency: 65,
-  },
-  "Verdeo de invierno": {
-    annual: 9500,
-    monthly: {
-      ene: 0,
-      feb: 0,
-      mar: 0,
-      abr: 0,
-      may: 8,
-      jun: 15,
-      jul: 20,
-      ago: 22,
-      sep: 20,
-      oct: 10,
-      nov: 5,
-      dic: 0,
+    {
+      name: "Dactylis + trébol blanco + trébol rojo",
+      annual: 9000,
+      monthly: { ene: 10, feb: 8, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10 },
+      defaultStartMonth: 7,
+      defaultEndMonth: 12,
+      defaultEfficiency: 65,
     },
-    defaultStartMonth: 5,
-    defaultEndMonth: 10,
-    defaultEfficiency: 70,
-  },
-  "Verdeo de verano": {
-    annual: 13000,
-    monthly: {
-      ene: 20,
-      feb: 18,
-      mar: 10,
-      abr: 3,
-      may: 0,
-      jun: 0,
-      jul: 0,
-      ago: 0,
-      sep: 0,
-      oct: 0,
-      nov: 14,
-      dic: 35,
+    {
+      name: "Raigrás perenne + trébol blanco",
+      annual: 8200,
+      monthly: { ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6, jul: 6, ago: 8, sep: 11, oct: 13, nov: 11, dic: 7 },
+      defaultStartMonth: 7,
+      defaultEndMonth: 12,
+      defaultEfficiency: 65,
     },
-    defaultStartMonth: 11,
-    defaultEndMonth: 3,
-    defaultEfficiency: 70,
-  },
+  ],
+  "Verdeo de invierno": [
+    {
+      name: "Raigrás anual",
+      annual: 9500,
+      monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15, jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0 },
+      defaultStartMonth: 5,
+      defaultEndMonth: 10,
+      defaultEfficiency: 70,
+    },
+    {
+      name: "Avena",
+      annual: 8500,
+      monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20, jul: 23, ago: 20, sep: 15, oct: 8, nov: 2, dic: 0 },
+      defaultStartMonth: 5,
+      defaultEndMonth: 10,
+      defaultEfficiency: 70,
+    },
+    {
+      name: "Avena + raigrás",
+      annual: 9800,
+      monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18, jul: 22, ago: 22, sep: 17, oct: 9, nov: 2, dic: 0 },
+      defaultStartMonth: 5,
+      defaultEndMonth: 10,
+      defaultEfficiency: 70,
+    },
+  ],
+  "Verdeo de verano": [
+    {
+      name: "Sudangrás",
+      annual: 13000,
+      monthly: { ene: 20, feb: 18, mar: 10, abr: 3, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 14, dic: 35 },
+      defaultStartMonth: 11,
+      defaultEndMonth: 3,
+      defaultEfficiency: 70,
+    },
+    {
+      name: "Sorgo forrajero",
+      annual: 14500,
+      monthly: { ene: 22, feb: 20, mar: 12, abr: 4, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 12, dic: 30 },
+      defaultStartMonth: 11,
+      defaultEndMonth: 3,
+      defaultEfficiency: 70,
+    },
+    {
+      name: "Moha",
+      annual: 9000,
+      monthly: { ene: 28, feb: 25, mar: 12, abr: 0, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 10, dic: 25 },
+      defaultStartMonth: 11,
+      defaultEndMonth: 2,
+      defaultEfficiency: 70,
+    },
+  ],
 };
 
 function n(v) {
@@ -309,6 +327,14 @@ function getEnvironmentOptions(region) {
   return FIELD_NATURAL_TABLE.filter((r) => r.region === region).map(
     (r) => r.environment
   );
+}
+
+function getSubtypeOptions(resourceType) {
+  return SEEDED_SUBTYPES[resourceType] || [];
+}
+
+function getSubtypeRow(resourceType, subtypeName) {
+  return getSubtypeOptions(resourceType).find((s) => s.name === subtypeName);
 }
 
 function monthIsActive(monthIndex, startMonth, endMonth) {
@@ -374,6 +400,7 @@ export default function App() {
         name: "Potrero 1",
         hectares: 100,
         resourceType: "Campo natural",
+        subtype: "",
         environment: "Serrano medio",
         startMonth: 1,
         endMonth: 12,
@@ -457,6 +484,7 @@ export default function App() {
         name: `Potrero ${prev.length + 1}`,
         hectares: 0,
         resourceType: "Campo natural",
+        subtype: "",
         environment: getEnvironmentOptions(farm.region)[0] || "",
         startMonth: 1,
         endMonth: 12,
@@ -474,18 +502,27 @@ export default function App() {
 
         if (key === "resourceType") {
           if (value === "Campo natural") {
+            updated.subtype = "";
             updated.environment = getEnvironmentOptions(farm.region)[0] || "";
             updated.startMonth = 1;
             updated.endMonth = 12;
             updated.efficiency = 50;
           } else {
+            const firstSubtype = getSubtypeOptions(value)[0];
+            updated.subtype = firstSubtype?.name || "";
             updated.environment = "";
-            updated.startMonth =
-              SEEDED_RESOURCE_TABLE[value]?.defaultStartMonth ?? 1;
-            updated.endMonth =
-              SEEDED_RESOURCE_TABLE[value]?.defaultEndMonth ?? 12;
-            updated.efficiency =
-              SEEDED_RESOURCE_TABLE[value]?.defaultEfficiency ?? 65;
+            updated.startMonth = firstSubtype?.defaultStartMonth ?? 1;
+            updated.endMonth = firstSubtype?.defaultEndMonth ?? 12;
+            updated.efficiency = firstSubtype?.defaultEfficiency ?? 65;
+          }
+        }
+
+        if (key === "subtype") {
+          const subtypeRow = getSubtypeRow(updated.resourceType, value);
+          if (subtypeRow) {
+            updated.startMonth = subtypeRow.defaultStartMonth;
+            updated.endMonth = subtypeRow.defaultEndMonth;
+            updated.efficiency = subtypeRow.defaultEfficiency;
           }
         }
 
@@ -552,7 +589,7 @@ export default function App() {
           return sum + monthlyPerHa * n(p.hectares) * (n(p.efficiency) / 100);
         }
 
-        const resource = SEEDED_RESOURCE_TABLE[p.resourceType];
+        const resource = getSubtypeRow(p.resourceType, p.subtype);
         if (!resource) return sum;
 
         const pct = n(resource.monthly[m.key]);
@@ -610,8 +647,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 5: recursos por potrero, mes inicio, mes fin y eficiencia
-              editable.
+              Versión 6: subtipos de pradera y verdeo, más escenarios guardados.
             </p>
           </div>
 
@@ -781,12 +817,18 @@ export default function App() {
                       </div>
                     ) : (
                       <div>
-                        <label style={smallLabelStyle}>Ambiente</label>
-                        <input
-                          value="No aplica"
-                          disabled
-                          style={{ ...inputStyle, background: "#f1f5f9" }}
-                        />
+                        <label style={smallLabelStyle}>Subtipo</label>
+                        <select
+                          value={p.subtype}
+                          onChange={(e) =>
+                            updatePaddock(p.id, "subtype", e.target.value)
+                          }
+                          style={inputStyle}
+                        >
+                          {getSubtypeOptions(p.resourceType).map((s) => (
+                            <option key={s.name}>{s.name}</option>
+                          ))}
+                        </select>
                       </div>
                     )}
 
@@ -1016,7 +1058,7 @@ const pageStyle = {
 };
 
 const containerStyle = {
-  maxWidth: 1280,
+  maxWidth: 1320,
   margin: "0 auto",
   background: "#ffffff",
   borderRadius: 24,
@@ -1095,7 +1137,7 @@ const boxStyle = {
 
 const paddockGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1.1fr 0.65fr 1fr 1fr 0.8fr 0.8fr 0.8fr auto",
+  gridTemplateColumns: "1.05fr 0.65fr 1fr 1.15fr 0.8fr 0.8fr 0.8fr auto",
   gap: 8,
   alignItems: "end",
 };
@@ -1177,3 +1219,4 @@ const tdStyle = {
   fontSize: 14,
   color: "#334155",
 };
+
