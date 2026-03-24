@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
@@ -7,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
 } from "recharts";
 
 const MONTHS = [
@@ -42,6 +42,13 @@ const REGIONS = [
   "Llanuras del Este / Cuenca Laguna Merín",
 ];
 
+const RESOURCE_TYPES = [
+  "Campo natural",
+  "Pradera",
+  "Verdeo de invierno",
+  "Verdeo de verano",
+];
+
 const ANIMAL_CATEGORIES = [
   { label: "Vaca cría", intake: 2.3, weight: 400 },
   { label: "Ternero", intake: 2.8, weight: 110 },
@@ -60,7 +67,6 @@ const FIELD_NATURAL_TABLE = [
     winter: 5,
     spring: 26,
     summer: 41,
-    utilization: 0.5,
   },
   {
     region: "Sierras del Este",
@@ -70,7 +76,6 @@ const FIELD_NATURAL_TABLE = [
     winter: 7,
     spring: 28,
     summer: 39,
-    utilization: 0.52,
   },
   {
     region: "Sierras del Este",
@@ -80,7 +85,6 @@ const FIELD_NATURAL_TABLE = [
     winter: 9,
     spring: 30,
     summer: 37,
-    utilization: 0.55,
   },
   {
     region: "Lomadas del Este",
@@ -90,7 +94,6 @@ const FIELD_NATURAL_TABLE = [
     winter: 15,
     spring: 35,
     summer: 24,
-    utilization: 0.55,
   },
   {
     region: "Basalto",
@@ -100,7 +103,6 @@ const FIELD_NATURAL_TABLE = [
     winter: 15,
     spring: 40,
     summer: 17,
-    utilization: 0.55,
   },
   {
     region: "Basalto",
@@ -110,21 +112,102 @@ const FIELD_NATURAL_TABLE = [
     winter: 12,
     spring: 44,
     summer: 19,
-    utilization: 0.6,
   },
-];
-
-const RESOURCE_TYPES = [
-  "Campo natural",
-  "Pradera",
-  "Verdeo de invierno",
-  "Verdeo de verano",
+  {
+    region: "Cristalino / Centro Sur",
+    environment: "Superficial",
+    annual: 2316,
+    autumn: 22,
+    winter: 22,
+    spring: 21,
+    summer: 35,
+  },
+  {
+    region: "Cristalino / Centro Sur",
+    environment: "Brunosol subeútrico",
+    annual: 3206,
+    autumn: 22,
+    winter: 18,
+    spring: 27,
+    summer: 33,
+  },
+  {
+    region: "Cristalino / Centro Sur",
+    environment: "Brunosol eútrico",
+    annual: 3665,
+    autumn: 21,
+    winter: 16,
+    spring: 28,
+    summer: 35,
+  },
+  {
+    region: "Areniscas",
+    environment: "Ladera alta",
+    annual: 5144,
+    autumn: 13,
+    winter: 7,
+    spring: 31,
+    summer: 49,
+  },
+  {
+    region: "Cretácico",
+    environment: "Agrio",
+    annual: 5530,
+    autumn: 23,
+    winter: 15,
+    spring: 28,
+    summer: 34,
+  },
+  {
+    region: "Litoral",
+    environment: "General",
+    annual: 6000,
+    autumn: 24,
+    winter: 16,
+    spring: 34,
+    summer: 26,
+  },
+  {
+    region: "Litoral Sur",
+    environment: "General agrícola-ganadero",
+    annual: 7000,
+    autumn: 25,
+    winter: 18,
+    spring: 36,
+    summer: 21,
+  },
+  {
+    region: "Llanuras del Este / Cuenca Laguna Merín",
+    environment: "Tendido alto",
+    annual: 3000,
+    autumn: 22,
+    winter: 10,
+    spring: 28,
+    summer: 40,
+  },
+  {
+    region: "Llanuras del Este / Cuenca Laguna Merín",
+    environment: "Plano medio",
+    annual: 3800,
+    autumn: 21,
+    winter: 11,
+    spring: 30,
+    summer: 38,
+  },
+  {
+    region: "Llanuras del Este / Cuenca Laguna Merín",
+    environment: "Bajo dulce/húmedo",
+    annual: 4500,
+    autumn: 20,
+    winter: 14,
+    spring: 31,
+    summer: 35,
+  },
 ];
 
 const SEEDED_RESOURCE_TABLE = {
   Pradera: {
     annual: 8500,
-    utilization: 0.65,
     monthly: {
       ene: 9,
       feb: 7,
@@ -141,10 +224,10 @@ const SEEDED_RESOURCE_TABLE = {
     },
     defaultStartMonth: 7,
     defaultEndMonth: 12,
+    defaultEfficiency: 65,
   },
   "Verdeo de invierno": {
     annual: 9500,
-    utilization: 0.7,
     monthly: {
       ene: 0,
       feb: 0,
@@ -161,10 +244,10 @@ const SEEDED_RESOURCE_TABLE = {
     },
     defaultStartMonth: 5,
     defaultEndMonth: 10,
+    defaultEfficiency: 70,
   },
   "Verdeo de verano": {
     annual: 13000,
-    utilization: 0.7,
     monthly: {
       ene: 20,
       feb: 18,
@@ -181,6 +264,7 @@ const SEEDED_RESOURCE_TABLE = {
     },
     defaultStartMonth: 11,
     defaultEndMonth: 3,
+    defaultEfficiency: 70,
   },
 };
 
@@ -254,32 +338,114 @@ function SummaryCard({ title, value }) {
 }
 
 export default function App() {
-  const [farm, setFarm] = useState({
-    name: "Mi establecimiento",
-    region: "Sierras del Este",
-  });
+  const loadSaved = () => {
+    try {
+      const saved = localStorage.getItem("bf_establecimientos");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  };
 
-  const [paddocks, setPaddocks] = useState([
-    {
-      id: 1,
-      name: "Potrero 1",
-      hectares: 100,
-      resourceType: "Campo natural",
-      environment: "Serrano medio",
-      startMonth: 1,
-      endMonth: 12,
-    },
-  ]);
+  const loadAutosave = () => {
+    try {
+      const saved = localStorage.getItem("bf_autosave");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  };
 
-  const [herd, setHerd] = useState([
-    {
-      id: 1,
-      category: "Vaca cría",
-      heads: 100,
-      weight: 400,
-      intake: 2.3,
-    },
-  ]);
+  const autosave = loadAutosave();
+
+  const [savedFarms, setSavedFarms] = useState(loadSaved());
+
+  const [farm, setFarm] = useState(
+    autosave?.farm || {
+      name: "Mi establecimiento",
+      region: "Sierras del Este",
+    }
+  );
+
+  const [paddocks, setPaddocks] = useState(
+    autosave?.paddocks || [
+      {
+        id: 1,
+        name: "Potrero 1",
+        hectares: 100,
+        resourceType: "Campo natural",
+        environment: "Serrano medio",
+        startMonth: 1,
+        endMonth: 12,
+        efficiency: 50,
+      },
+    ]
+  );
+
+  const [herd, setHerd] = useState(
+    autosave?.herd || [
+      {
+        id: 1,
+        category: "Vaca cría",
+        heads: 100,
+        weight: 400,
+        intake: 2.3,
+      },
+    ]
+  );
+
+  useEffect(() => {
+    localStorage.setItem(
+      "bf_autosave",
+      JSON.stringify({ farm, paddocks, herd })
+    );
+  }, [farm, paddocks, herd]);
+
+  const persistFarms = (list) => {
+    setSavedFarms(list);
+    localStorage.setItem("bf_establecimientos", JSON.stringify(list));
+  };
+
+  const saveFarm = () => {
+    const farmData = {
+      id: Date.now(),
+      farm,
+      paddocks,
+      herd,
+    };
+    persistFarms([...savedFarms, farmData]);
+  };
+
+  const loadFarm = (f) => {
+    setFarm(f.farm);
+    setPaddocks(f.paddocks);
+    setHerd(f.herd);
+  };
+
+  const duplicateScenario = () => {
+    setPaddocks(JSON.parse(JSON.stringify(paddocks)));
+    setHerd(JSON.parse(JSON.stringify(herd)));
+  };
+
+  const exportCSV = () => {
+    const rows = MONTHS.map((m, i) => [
+      m.label,
+      Math.round(results.offerByMonth[i]),
+      Math.round(results.demandByMonth[i]),
+      Math.round(results.balanceByMonth[i]),
+    ]);
+
+    const csv = [["Mes", "Oferta", "Demanda", "Balance"], ...rows]
+      .map((e) => e.join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "balance_forrajero.csv";
+    a.click();
+  };
 
   const environmentOptions = getEnvironmentOptions(farm.region);
 
@@ -294,6 +460,7 @@ export default function App() {
         environment: getEnvironmentOptions(farm.region)[0] || "",
         startMonth: 1,
         endMonth: 12,
+        efficiency: 50,
       },
     ]);
   };
@@ -310,12 +477,15 @@ export default function App() {
             updated.environment = getEnvironmentOptions(farm.region)[0] || "";
             updated.startMonth = 1;
             updated.endMonth = 12;
+            updated.efficiency = 50;
           } else {
             updated.environment = "";
             updated.startMonth =
               SEEDED_RESOURCE_TABLE[value]?.defaultStartMonth ?? 1;
             updated.endMonth =
               SEEDED_RESOURCE_TABLE[value]?.defaultEndMonth ?? 12;
+            updated.efficiency =
+              SEEDED_RESOURCE_TABLE[value]?.defaultEfficiency ?? 65;
           }
         }
 
@@ -346,6 +516,7 @@ export default function App() {
     setHerd((prev) =>
       prev.map((h) => {
         if (h.id !== id) return h;
+
         if (key === "category") {
           const found = ANIMAL_CATEGORIES.find((a) => a.label === value);
           return {
@@ -355,6 +526,7 @@ export default function App() {
             intake: found?.intake ?? h.intake,
           };
         }
+
         return { ...h, [key]: value };
       })
     );
@@ -372,17 +544,21 @@ export default function App() {
         if (p.resourceType === "Campo natural") {
           const row = getFieldNaturalRow(farm.region, p.environment);
           if (!row) return sum;
+
           const dist = seasonToMonthly(row);
           const pct = n(dist[m.key]);
           const monthlyPerHa = row.annual * (pct / 100);
-          return sum + monthlyPerHa * n(p.hectares) * row.utilization;
+
+          return sum + monthlyPerHa * n(p.hectares) * (n(p.efficiency) / 100);
         }
 
         const resource = SEEDED_RESOURCE_TABLE[p.resourceType];
         if (!resource) return sum;
+
         const pct = n(resource.monthly[m.key]);
         const monthlyPerHa = resource.annual * (pct / 100);
-        return sum + monthlyPerHa * n(p.hectares) * resource.utilization;
+
+        return sum + monthlyPerHa * n(p.hectares) * (n(p.efficiency) / 100);
       }, 0);
     });
 
@@ -428,13 +604,49 @@ export default function App() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
+        <div style={headerRowStyle}>
+          <div>
+            <h1 style={{ fontSize: 32, margin: 0, color: "#0f172a" }}>
+              Balance Forrajero
+            </h1>
+            <p style={{ color: "#64748b", marginTop: 8 }}>
+              Versión 5: recursos por potrero, mes inicio, mes fin y eficiencia
+              editable.
+            </p>
+          </div>
+
+          <div style={actionsRowStyle}>
+            <button onClick={saveFarm} style={buttonStyle}>
+              Guardar
+            </button>
+            <button onClick={duplicateScenario} style={buttonStyle}>
+              Duplicar escenario
+            </button>
+            <button onClick={exportCSV} style={buttonStyle}>
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 32, margin: 0, color: "#0f172a" }}>
-            Balance Forrajero
-          </h1>
-          <p style={{ color: "#64748b", marginTop: 8 }}>
-            Versión 4: recursos por potrero, mes de inicio y mes de fin.
-          </p>
+          <h2 style={panelTitleStyle}>Establecimientos guardados</h2>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {savedFarms.length === 0 ? (
+              <div style={{ color: "#64748b", fontSize: 14 }}>
+                Aún no hay establecimientos guardados.
+              </div>
+            ) : (
+              savedFarms.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => loadFarm(f)}
+                  style={secondaryButtonStyle}
+                >
+                  {f.farm.name}
+                </button>
+              ))
+            )}
+          </div>
         </div>
 
         <div style={topGridStyle}>
@@ -513,7 +725,7 @@ export default function App() {
             <div style={{ display: "grid", gap: 12 }}>
               {paddocks.map((p) => (
                 <div key={p.id} style={boxStyle}>
-                  <div style={paddockGridStyleV3}>
+                  <div style={paddockGridStyle}>
                     <div>
                       <label style={smallLabelStyle}>Nombre</label>
                       <input
@@ -614,6 +826,18 @@ export default function App() {
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    <div>
+                      <label style={smallLabelStyle}>Eficiencia %</label>
+                      <input
+                        type="number"
+                        value={p.efficiency}
+                        onChange={(e) =>
+                          updatePaddock(p.id, "efficiency", e.target.value)
+                        }
+                        style={inputStyle}
+                      />
                     </div>
 
                     <button
@@ -792,12 +1016,27 @@ const pageStyle = {
 };
 
 const containerStyle = {
-  maxWidth: 1200,
+  maxWidth: 1280,
   margin: "0 auto",
   background: "#ffffff",
   borderRadius: 24,
   padding: 24,
   boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+};
+
+const headerRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 16,
+  marginBottom: 24,
+  flexWrap: "wrap",
+};
+
+const actionsRowStyle = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap",
 };
 
 const topGridStyle = {
@@ -854,9 +1093,9 @@ const boxStyle = {
   background: "#fff",
 };
 
-const paddockGridStyleV3 = {
+const paddockGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1.05fr 0.65fr 1fr 1fr 0.8fr 0.8fr auto",
+  gridTemplateColumns: "1.1fr 0.65fr 1fr 1fr 0.8fr 0.8fr 0.8fr auto",
   gap: 8,
   alignItems: "end",
 };
@@ -893,6 +1132,16 @@ const buttonStyle = {
   border: "none",
   background: "#0f172a",
   color: "#fff",
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const secondaryButtonStyle = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
   fontWeight: 600,
   cursor: "pointer",
 };
