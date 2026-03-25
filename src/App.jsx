@@ -49,6 +49,12 @@ const RESOURCE_TYPES = [
   "Verdeo de verano",
 ];
 
+const MANAGEMENT_LEVELS = [
+  { label: "Bajo", factor: 0.7 },
+  { label: "Medio", factor: 1.0 },
+  { label: "Alto", factor: 1.3 },
+];
+
 const ANIMAL_CATEGORIES = [
   { label: "Vaca cría", intake: 2.3, weight: 400 },
   { label: "Ternero", intake: 2.8, weight: 110 },
@@ -210,7 +216,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Festuca + trébol blanco + lotus",
       annual: 8500,
-      monthly: { ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11 },
+      monthly: {
+        ene: 9,
+        feb: 7,
+        mar: 7,
+        abr: 7,
+        may: 6,
+        jun: 5,
+        jul: 5,
+        ago: 7,
+        sep: 10,
+        oct: 13,
+        nov: 13,
+        dic: 11,
+      },
       defaultStartMonth: 7,
       defaultEndMonth: 12,
       defaultEfficiency: 65,
@@ -218,7 +237,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Dactylis + trébol blanco + trébol rojo",
       annual: 9000,
-      monthly: { ene: 10, feb: 8, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10 },
+      monthly: {
+        ene: 10,
+        feb: 8,
+        mar: 7,
+        abr: 7,
+        may: 6,
+        jun: 5,
+        jul: 5,
+        ago: 7,
+        sep: 10,
+        oct: 13,
+        nov: 12,
+        dic: 10,
+      },
       defaultStartMonth: 7,
       defaultEndMonth: 12,
       defaultEfficiency: 65,
@@ -226,7 +258,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Raigrás perenne + trébol blanco",
       annual: 8200,
-      monthly: { ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6, jul: 6, ago: 8, sep: 11, oct: 13, nov: 11, dic: 7 },
+      monthly: {
+        ene: 8,
+        feb: 7,
+        mar: 8,
+        abr: 8,
+        may: 7,
+        jun: 6,
+        jul: 6,
+        ago: 8,
+        sep: 11,
+        oct: 13,
+        nov: 11,
+        dic: 7,
+      },
       defaultStartMonth: 7,
       defaultEndMonth: 12,
       defaultEfficiency: 65,
@@ -236,7 +281,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Raigrás anual",
       annual: 9500,
-      monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15, jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0 },
+      monthly: {
+        ene: 0,
+        feb: 0,
+        mar: 0,
+        abr: 0,
+        may: 8,
+        jun: 15,
+        jul: 20,
+        ago: 22,
+        sep: 20,
+        oct: 10,
+        nov: 5,
+        dic: 0,
+      },
       defaultStartMonth: 5,
       defaultEndMonth: 10,
       defaultEfficiency: 70,
@@ -244,7 +302,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Avena",
       annual: 8500,
-      monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20, jul: 23, ago: 20, sep: 15, oct: 8, nov: 2, dic: 0 },
+      monthly: {
+        ene: 0,
+        feb: 0,
+        mar: 0,
+        abr: 0,
+        may: 12,
+        jun: 20,
+        jul: 23,
+        ago: 20,
+        sep: 15,
+        oct: 8,
+        nov: 2,
+        dic: 0,
+      },
       defaultStartMonth: 5,
       defaultEndMonth: 10,
       defaultEfficiency: 70,
@@ -252,7 +323,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Avena + raigrás",
       annual: 9800,
-      monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18, jul: 22, ago: 22, sep: 17, oct: 9, nov: 2, dic: 0 },
+      monthly: {
+        ene: 0,
+        feb: 0,
+        mar: 0,
+        abr: 0,
+        may: 10,
+        jun: 18,
+        jul: 22,
+        ago: 22,
+        sep: 17,
+        oct: 9,
+        nov: 2,
+        dic: 0,
+      },
       defaultStartMonth: 5,
       defaultEndMonth: 10,
       defaultEfficiency: 70,
@@ -262,7 +346,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Sudangrás",
       annual: 13000,
-      monthly: { ene: 20, feb: 18, mar: 10, abr: 3, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 14, dic: 35 },
+      monthly: {
+        ene: 20,
+        feb: 18,
+        mar: 10,
+        abr: 3,
+        may: 0,
+        jun: 0,
+        jul: 0,
+        ago: 0,
+        sep: 0,
+        oct: 0,
+        nov: 14,
+        dic: 35,
+      },
       defaultStartMonth: 11,
       defaultEndMonth: 3,
       defaultEfficiency: 70,
@@ -270,7 +367,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Sorgo forrajero",
       annual: 14500,
-      monthly: { ene: 22, feb: 20, mar: 12, abr: 4, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 12, dic: 30 },
+      monthly: {
+        ene: 22,
+        feb: 20,
+        mar: 12,
+        abr: 4,
+        may: 0,
+        jun: 0,
+        jul: 0,
+        ago: 0,
+        sep: 0,
+        oct: 0,
+        nov: 12,
+        dic: 30,
+      },
       defaultStartMonth: 11,
       defaultEndMonth: 3,
       defaultEfficiency: 70,
@@ -278,7 +388,20 @@ const SEEDED_SUBTYPES = {
     {
       name: "Moha",
       annual: 9000,
-      monthly: { ene: 28, feb: 25, mar: 12, abr: 0, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 10, dic: 25 },
+      monthly: {
+        ene: 28,
+        feb: 25,
+        mar: 12,
+        abr: 0,
+        may: 0,
+        jun: 0,
+        jul: 0,
+        ago: 0,
+        sep: 0,
+        oct: 0,
+        nov: 10,
+        dic: 25,
+      },
       defaultStartMonth: 11,
       defaultEndMonth: 2,
       defaultEfficiency: 70,
@@ -405,6 +528,7 @@ export default function App() {
         startMonth: 1,
         endMonth: 12,
         efficiency: 50,
+        management: "Medio",
       },
     ]
   );
@@ -489,6 +613,7 @@ export default function App() {
         startMonth: 1,
         endMonth: 12,
         efficiency: 50,
+        management: "Medio",
       },
     ]);
   };
@@ -524,6 +649,10 @@ export default function App() {
             updated.endMonth = subtypeRow.defaultEndMonth;
             updated.efficiency = subtypeRow.defaultEfficiency;
           }
+        }
+
+        if (!updated.management) {
+          updated.management = "Medio";
         }
 
         return updated;
@@ -578,6 +707,10 @@ export default function App() {
       return paddocks.reduce((sum, p) => {
         if (!monthIsActive(m.index, p.startMonth, p.endMonth)) return sum;
 
+        const managementFactor =
+          MANAGEMENT_LEVELS.find((lvl) => lvl.label === p.management)?.factor ??
+          1;
+
         if (p.resourceType === "Campo natural") {
           const row = getFieldNaturalRow(farm.region, p.environment);
           if (!row) return sum;
@@ -586,7 +719,13 @@ export default function App() {
           const pct = n(dist[m.key]);
           const monthlyPerHa = row.annual * (pct / 100);
 
-          return sum + monthlyPerHa * n(p.hectares) * (n(p.efficiency) / 100);
+          return (
+            sum +
+            monthlyPerHa *
+              n(p.hectares) *
+              (n(p.efficiency) / 100) *
+              managementFactor
+          );
         }
 
         const resource = getSubtypeRow(p.resourceType, p.subtype);
@@ -595,7 +734,13 @@ export default function App() {
         const pct = n(resource.monthly[m.key]);
         const monthlyPerHa = resource.annual * (pct / 100);
 
-        return sum + monthlyPerHa * n(p.hectares) * (n(p.efficiency) / 100);
+        return (
+          sum +
+          monthlyPerHa *
+            n(p.hectares) *
+            (n(p.efficiency) / 100) *
+            managementFactor
+        );
       }, 0);
     });
 
@@ -647,7 +792,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 6: subtipos de pradera y verdeo, más escenarios guardados.
+              Versión 7: subtipos, escenarios guardados y nivel de manejo.
             </p>
           </div>
 
@@ -871,6 +1016,21 @@ export default function App() {
                     </div>
 
                     <div>
+                      <label style={smallLabelStyle}>Manejo</label>
+                      <select
+                        value={p.management}
+                        onChange={(e) =>
+                          updatePaddock(p.id, "management", e.target.value)
+                        }
+                        style={inputStyle}
+                      >
+                        {MANAGEMENT_LEVELS.map((lvl) => (
+                          <option key={lvl.label}>{lvl.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
                       <label style={smallLabelStyle}>Eficiencia %</label>
                       <input
                         type="number"
@@ -1058,7 +1218,7 @@ const pageStyle = {
 };
 
 const containerStyle = {
-  maxWidth: 1320,
+  maxWidth: 1380,
   margin: "0 auto",
   background: "#ffffff",
   borderRadius: 24,
@@ -1137,7 +1297,8 @@ const boxStyle = {
 
 const paddockGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1.05fr 0.65fr 1fr 1.15fr 0.8fr 0.8fr 0.8fr auto",
+  gridTemplateColumns:
+    "1.05fr 0.65fr 1fr 1.25fr 0.8fr 0.8fr 0.9fr 0.8fr auto",
   gap: 8,
   alignItems: "end",
 };
@@ -1219,4 +1380,3 @@ const tdStyle = {
   fontSize: 14,
   color: "#334155",
 };
-
