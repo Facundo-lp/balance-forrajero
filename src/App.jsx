@@ -55,6 +55,12 @@ const MANAGEMENT_LEVELS = [
   { label: "Alto", factor: 1.3 },
 ];
 
+const CLIMATE_SCENARIOS = [
+  { label: "Seco", factor: 0.7 },
+  { label: "Normal", factor: 1.0 },
+  { label: "Húmedo", factor: 1.2 },
+];
+
 const ANIMAL_CATEGORIES = [
   { label: "Vaca cría", intake: 2.3, weight: 400 },
   { label: "Ternero", intake: 2.8, weight: 110 },
@@ -230,7 +236,7 @@ const SEEDED_SUBTYPES = {
         nov: 13,
         dic: 11,
       },
-      defaultStartMonth: 7,
+      defaultFirstGrazingDays: 90,
       defaultEndMonth: 12,
       defaultEfficiency: 65,
     },
@@ -251,7 +257,7 @@ const SEEDED_SUBTYPES = {
         nov: 12,
         dic: 10,
       },
-      defaultStartMonth: 7,
+      defaultFirstGrazingDays: 90,
       defaultEndMonth: 12,
       defaultEfficiency: 65,
     },
@@ -272,7 +278,7 @@ const SEEDED_SUBTYPES = {
         nov: 11,
         dic: 7,
       },
-      defaultStartMonth: 7,
+      defaultFirstGrazingDays: 75,
       defaultEndMonth: 12,
       defaultEfficiency: 65,
     },
@@ -295,7 +301,7 @@ const SEEDED_SUBTYPES = {
         nov: 5,
         dic: 0,
       },
-      defaultStartMonth: 5,
+      defaultFirstGrazingDays: 60,
       defaultEndMonth: 10,
       defaultEfficiency: 70,
     },
@@ -316,7 +322,7 @@ const SEEDED_SUBTYPES = {
         nov: 2,
         dic: 0,
       },
-      defaultStartMonth: 5,
+      defaultFirstGrazingDays: 45,
       defaultEndMonth: 10,
       defaultEfficiency: 70,
     },
@@ -337,7 +343,7 @@ const SEEDED_SUBTYPES = {
         nov: 2,
         dic: 0,
       },
-      defaultStartMonth: 5,
+      defaultFirstGrazingDays: 50,
       defaultEndMonth: 10,
       defaultEfficiency: 70,
     },
@@ -360,7 +366,7 @@ const SEEDED_SUBTYPES = {
         nov: 14,
         dic: 35,
       },
-      defaultStartMonth: 11,
+      defaultFirstGrazingDays: 45,
       defaultEndMonth: 3,
       defaultEfficiency: 70,
     },
@@ -381,7 +387,7 @@ const SEEDED_SUBTYPES = {
         nov: 12,
         dic: 30,
       },
-      defaultStartMonth: 11,
+      defaultFirstGrazingDays: 50,
       defaultEndMonth: 3,
       defaultEfficiency: 70,
     },
@@ -402,7 +408,7 @@ const SEEDED_SUBTYPES = {
         nov: 10,
         dic: 25,
       },
-      defaultStartMonth: 11,
+      defaultFirstGrazingDays: 35,
       defaultEndMonth: 2,
       defaultEfficiency: 70,
     },
@@ -460,6 +466,32 @@ function getSubtypeRow(resourceType, subtypeName) {
   return getSubtypeOptions(resourceType).find((s) => s.name === subtypeName);
 }
 
+function parseLocalDate(dateString) {
+  if (!dateString) return null;
+  const d = new Date(`${dateString}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function getFirstGrazingDate(paddock) {
+  if (paddock.resourceType === "Campo natural") return null;
+  const sowing = parseLocalDate(paddock.sowingDate);
+  if (!sowing) return null;
+  return addDays(sowing, n(paddock.firstGrazingDays));
+}
+
+function getEffectiveStartMonth(paddock) {
+  if (paddock.resourceType === "Campo natural") return 1;
+  const first = getFirstGrazingDate(paddock);
+  if (!first) return 1;
+  return first.getMonth() + 1;
+}
+
 function monthIsActive(monthIndex, startMonth, endMonth) {
   const start = n(startMonth);
   const end = n(endMonth);
@@ -513,6 +545,7 @@ export default function App() {
     autosave?.farm || {
       name: "Mi establecimiento",
       region: "Sierras del Este",
+      climate: "Normal",
     }
   );
 
@@ -525,7 +558,8 @@ export default function App() {
         resourceType: "Campo natural",
         subtype: "",
         environment: "Serrano medio",
-        startMonth: 1,
+        sowingDate: "",
+        firstGrazingDays: 0,
         endMonth: 12,
         efficiency: 50,
         management: "Medio",
@@ -610,7 +644,8 @@ export default function App() {
         resourceType: "Campo natural",
         subtype: "",
         environment: getEnvironmentOptions(farm.region)[0] || "",
-        startMonth: 1,
+        sowingDate: "",
+        firstGrazingDays: 0,
         endMonth: 12,
         efficiency: 50,
         management: "Medio",
@@ -629,14 +664,16 @@ export default function App() {
           if (value === "Campo natural") {
             updated.subtype = "";
             updated.environment = getEnvironmentOptions(farm.region)[0] || "";
-            updated.startMonth = 1;
+            updated.sowingDate = "";
+            updated.firstGrazingDays = 0;
             updated.endMonth = 12;
             updated.efficiency = 50;
           } else {
             const firstSubtype = getSubtypeOptions(value)[0];
             updated.subtype = firstSubtype?.name || "";
             updated.environment = "";
-            updated.startMonth = firstSubtype?.defaultStartMonth ?? 1;
+            updated.sowingDate = "";
+            updated.firstGrazingDays = firstSubtype?.defaultFirstGrazingDays ?? 60;
             updated.endMonth = firstSubtype?.defaultEndMonth ?? 12;
             updated.efficiency = firstSubtype?.defaultEfficiency ?? 65;
           }
@@ -645,7 +682,7 @@ export default function App() {
         if (key === "subtype") {
           const subtypeRow = getSubtypeRow(updated.resourceType, value);
           if (subtypeRow) {
-            updated.startMonth = subtypeRow.defaultStartMonth;
+            updated.firstGrazingDays = subtypeRow.defaultFirstGrazingDays;
             updated.endMonth = subtypeRow.defaultEndMonth;
             updated.efficiency = subtypeRow.defaultEfficiency;
           }
@@ -703,9 +740,15 @@ export default function App() {
   };
 
   const results = useMemo(() => {
+    const climateFactor =
+      CLIMATE_SCENARIOS.find((c) => c.label === farm.climate)?.factor ?? 1;
+
     const offerByMonth = MONTHS.map((m) => {
       return paddocks.reduce((sum, p) => {
-        if (!monthIsActive(m.index, p.startMonth, p.endMonth)) return sum;
+        const startMonth =
+          p.resourceType === "Campo natural" ? 1 : getEffectiveStartMonth(p);
+
+        if (!monthIsActive(m.index, startMonth, p.endMonth)) return sum;
 
         const managementFactor =
           MANAGEMENT_LEVELS.find((lvl) => lvl.label === p.management)?.factor ??
@@ -724,7 +767,8 @@ export default function App() {
             monthlyPerHa *
               n(p.hectares) *
               (n(p.efficiency) / 100) *
-              managementFactor
+              managementFactor *
+              climateFactor
           );
         }
 
@@ -739,7 +783,8 @@ export default function App() {
           monthlyPerHa *
             n(p.hectares) *
             (n(p.efficiency) / 100) *
-            managementFactor
+            managementFactor *
+            climateFactor
         );
       }, 0);
     });
@@ -781,7 +826,7 @@ export default function App() {
       currentLoad,
       chartData,
     };
-  }, [farm.region, paddocks, herd]);
+  }, [farm, paddocks, herd]);
 
   return (
     <div style={pageStyle}>
@@ -792,7 +837,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 7: subtipos, escenarios guardados y nivel de manejo.
+              Versión 8: año climático, fecha de siembra y primer pastoreo.
             </p>
           </div>
 
@@ -868,6 +913,21 @@ export default function App() {
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label style={labelStyle}>Año climático</label>
+                <select
+                  value={farm.climate}
+                  onChange={(e) =>
+                    setFarm((prev) => ({ ...prev, climate: e.target.value }))
+                  }
+                  style={inputStyle}
+                >
+                  {CLIMATE_SCENARIOS.map((c) => (
+                    <option key={c.label}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -904,153 +964,205 @@ export default function App() {
             </div>
 
             <div style={{ display: "grid", gap: 12 }}>
-              {paddocks.map((p) => (
-                <div key={p.id} style={boxStyle}>
-                  <div style={paddockGridStyle}>
-                    <div>
-                      <label style={smallLabelStyle}>Nombre</label>
-                      <input
-                        value={p.name}
-                        onChange={(e) =>
-                          updatePaddock(p.id, "name", e.target.value)
-                        }
-                        style={inputStyle}
-                      />
-                    </div>
+              {paddocks.map((p) => {
+                const firstGrazingDate = getFirstGrazingDate(p);
+                const firstGrazingText = firstGrazingDate
+                  ? firstGrazingDate.toLocaleDateString("es-UY")
+                  : "No aplica";
 
-                    <div>
-                      <label style={smallLabelStyle}>Hectáreas</label>
-                      <input
-                        type="number"
-                        value={p.hectares}
-                        onChange={(e) =>
-                          updatePaddock(p.id, "hectares", e.target.value)
-                        }
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={smallLabelStyle}>Recurso</label>
-                      <select
-                        value={p.resourceType}
-                        onChange={(e) =>
-                          updatePaddock(p.id, "resourceType", e.target.value)
-                        }
-                        style={inputStyle}
-                      >
-                        {RESOURCE_TYPES.map((r) => (
-                          <option key={r}>{r}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {p.resourceType === "Campo natural" ? (
+                return (
+                  <div key={p.id} style={boxStyle}>
+                    <div style={paddockGridStyle}>
                       <div>
-                        <label style={smallLabelStyle}>Ambiente</label>
-                        <select
-                          value={p.environment}
+                        <label style={smallLabelStyle}>Nombre</label>
+                        <input
+                          value={p.name}
                           onChange={(e) =>
-                            updatePaddock(p.id, "environment", e.target.value)
+                            updatePaddock(p.id, "name", e.target.value)
+                          }
+                          style={inputStyle}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={smallLabelStyle}>Hectáreas</label>
+                        <input
+                          type="number"
+                          value={p.hectares}
+                          onChange={(e) =>
+                            updatePaddock(p.id, "hectares", e.target.value)
+                          }
+                          style={inputStyle}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={smallLabelStyle}>Recurso</label>
+                        <select
+                          value={p.resourceType}
+                          onChange={(e) =>
+                            updatePaddock(p.id, "resourceType", e.target.value)
                           }
                           style={inputStyle}
                         >
-                          {environmentOptions.map((env) => (
-                            <option key={env}>{env}</option>
+                          {RESOURCE_TYPES.map((r) => (
+                            <option key={r}>{r}</option>
                           ))}
                         </select>
                       </div>
-                    ) : (
+
+                      {p.resourceType === "Campo natural" ? (
+                        <div>
+                          <label style={smallLabelStyle}>Ambiente</label>
+                          <select
+                            value={p.environment}
+                            onChange={(e) =>
+                              updatePaddock(p.id, "environment", e.target.value)
+                            }
+                            style={inputStyle}
+                          >
+                            {environmentOptions.map((env) => (
+                              <option key={env}>{env}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <label style={smallLabelStyle}>Subtipo</label>
+                          <select
+                            value={p.subtype}
+                            onChange={(e) =>
+                              updatePaddock(p.id, "subtype", e.target.value)
+                            }
+                            style={inputStyle}
+                          >
+                            {getSubtypeOptions(p.resourceType).map((s) => (
+                              <option key={s.name}>{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {p.resourceType === "Campo natural" ? (
+                        <>
+                          <div>
+                            <label style={smallLabelStyle}>Siembra</label>
+                            <input
+                              value="No aplica"
+                              disabled
+                              style={{ ...inputStyle, background: "#f1f5f9" }}
+                            />
+                          </div>
+                          <div>
+                            <label style={smallLabelStyle}>1er pastoreo</label>
+                            <input
+                              value="No aplica"
+                              disabled
+                              style={{ ...inputStyle, background: "#f1f5f9" }}
+                            />
+                          </div>
+                          <div>
+                            <label style={smallLabelStyle}>Días a pastoreo</label>
+                            <input
+                              value="No aplica"
+                              disabled
+                              style={{ ...inputStyle, background: "#f1f5f9" }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <label style={smallLabelStyle}>Fecha siembra</label>
+                            <input
+                              type="date"
+                              value={p.sowingDate}
+                              onChange={(e) =>
+                                updatePaddock(p.id, "sowingDate", e.target.value)
+                              }
+                              style={inputStyle}
+                            />
+                          </div>
+                          <div>
+                            <label style={smallLabelStyle}>1er pastoreo</label>
+                            <input
+                              value={firstGrazingText}
+                              disabled
+                              style={{ ...inputStyle, background: "#f1f5f9" }}
+                            />
+                          </div>
+                          <div>
+                            <label style={smallLabelStyle}>Días a pastoreo</label>
+                            <input
+                              type="number"
+                              value={p.firstGrazingDays}
+                              onChange={(e) =>
+                                updatePaddock(
+                                  p.id,
+                                  "firstGrazingDays",
+                                  e.target.value
+                                )
+                              }
+                              style={inputStyle}
+                            />
+                          </div>
+                        </>
+                      )}
+
                       <div>
-                        <label style={smallLabelStyle}>Subtipo</label>
+                        <label style={smallLabelStyle}>Mes fin</label>
                         <select
-                          value={p.subtype}
+                          value={p.endMonth}
                           onChange={(e) =>
-                            updatePaddock(p.id, "subtype", e.target.value)
+                            updatePaddock(p.id, "endMonth", Number(e.target.value))
                           }
                           style={inputStyle}
                         >
-                          {getSubtypeOptions(p.resourceType).map((s) => (
-                            <option key={s.name}>{s.name}</option>
+                          {MONTH_OPTIONS.map((m) => (
+                            <option key={m.value} value={m.value}>
+                              {m.label}
+                            </option>
                           ))}
                         </select>
                       </div>
-                    )}
 
-                    <div>
-                      <label style={smallLabelStyle}>Mes inicio</label>
-                      <select
-                        value={p.startMonth}
-                        onChange={(e) =>
-                          updatePaddock(
-                            p.id,
-                            "startMonth",
-                            Number(e.target.value)
-                          )
-                        }
-                        style={inputStyle}
+                      <div>
+                        <label style={smallLabelStyle}>Manejo</label>
+                        <select
+                          value={p.management}
+                          onChange={(e) =>
+                            updatePaddock(p.id, "management", e.target.value)
+                          }
+                          style={inputStyle}
+                        >
+                          {MANAGEMENT_LEVELS.map((lvl) => (
+                            <option key={lvl.label}>{lvl.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={smallLabelStyle}>Eficiencia %</label>
+                        <input
+                          type="number"
+                          value={p.efficiency}
+                          onChange={(e) =>
+                            updatePaddock(p.id, "efficiency", e.target.value)
+                          }
+                          style={inputStyle}
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => removePaddock(p.id)}
+                        style={dangerButtonStyle}
                       >
-                        {MONTH_OPTIONS.map((m) => (
-                          <option key={m.value} value={m.value}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
+                        Eliminar
+                      </button>
                     </div>
-
-                    <div>
-                      <label style={smallLabelStyle}>Mes fin</label>
-                      <select
-                        value={p.endMonth}
-                        onChange={(e) =>
-                          updatePaddock(p.id, "endMonth", Number(e.target.value))
-                        }
-                        style={inputStyle}
-                      >
-                        {MONTH_OPTIONS.map((m) => (
-                          <option key={m.value} value={m.value}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={smallLabelStyle}>Manejo</label>
-                      <select
-                        value={p.management}
-                        onChange={(e) =>
-                          updatePaddock(p.id, "management", e.target.value)
-                        }
-                        style={inputStyle}
-                      >
-                        {MANAGEMENT_LEVELS.map((lvl) => (
-                          <option key={lvl.label}>{lvl.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={smallLabelStyle}>Eficiencia %</label>
-                      <input
-                        type="number"
-                        value={p.efficiency}
-                        onChange={(e) =>
-                          updatePaddock(p.id, "efficiency", e.target.value)
-                        }
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => removePaddock(p.id)}
-                      style={dangerButtonStyle}
-                    >
-                      Eliminar
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -1218,7 +1330,7 @@ const pageStyle = {
 };
 
 const containerStyle = {
-  maxWidth: 1380,
+  maxWidth: 1600,
   margin: "0 auto",
   background: "#ffffff",
   borderRadius: 24,
@@ -1298,7 +1410,7 @@ const boxStyle = {
 const paddockGridStyle = {
   display: "grid",
   gridTemplateColumns:
-    "1.05fr 0.65fr 1fr 1.25fr 0.8fr 0.8fr 0.9fr 0.8fr auto",
+    "1fr 0.6fr 0.9fr 1.2fr 1fr 1fr 0.85fr 0.8fr 0.8fr 0.8fr auto",
   gap: 8,
   alignItems: "end",
 };
