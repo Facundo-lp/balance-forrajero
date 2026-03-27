@@ -673,7 +673,8 @@ export default function App() {
             updated.subtype = firstSubtype?.name || "";
             updated.environment = "";
             updated.sowingDate = "";
-            updated.firstGrazingDays = firstSubtype?.defaultFirstGrazingDays ?? 60;
+            updated.firstGrazingDays =
+              firstSubtype?.defaultFirstGrazingDays ?? 60;
             updated.endMonth = firstSubtype?.defaultEndMonth ?? 12;
             updated.efficiency = firstSubtype?.defaultEfficiency ?? 65;
           }
@@ -971,8 +972,8 @@ export default function App() {
                   : "No aplica";
 
                 return (
-                  <div key={p.id} style={boxStyle}>
-                    <div style={paddockGridStyle}>
+                  <div key={p.id} style={paddockCardStyle}>
+                    <div style={paddockRow1Style}>
                       <div>
                         <label style={smallLabelStyle}>Nombre</label>
                         <input
@@ -1042,11 +1043,13 @@ export default function App() {
                           </select>
                         </div>
                       )}
+                    </div>
 
+                    <div style={paddockRow2Style}>
                       {p.resourceType === "Campo natural" ? (
                         <>
                           <div>
-                            <label style={smallLabelStyle}>Siembra</label>
+                            <label style={smallLabelStyle}>Fecha siembra</label>
                             <input
                               value="No aplica"
                               disabled
@@ -1153,12 +1156,14 @@ export default function App() {
                         />
                       </div>
 
-                      <button
-                        onClick={() => removePaddock(p.id)}
-                        style={dangerButtonStyle}
-                      >
-                        Eliminar
-                      </button>
+                      <div style={{ display: "flex", alignItems: "end" }}>
+                        <button
+                          onClick={() => removePaddock(p.id)}
+                          style={dangerButtonStyle}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1330,7 +1335,7 @@ const pageStyle = {
 };
 
 const containerStyle = {
-  maxWidth: 1600,
+  maxWidth: 1500,
   margin: "0 auto",
   background: "#ffffff",
   borderRadius: 24,
@@ -1362,7 +1367,7 @@ const topGridStyle = {
 
 const midGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  gridTemplateColumns: "1.2fr 0.8fr",
   gap: 16,
   marginBottom: 24,
 };
@@ -1407,10 +1412,25 @@ const boxStyle = {
   background: "#fff",
 };
 
-const paddockGridStyle = {
+const paddockCardStyle = {
+  border: "1px solid #cbd5e1",
+  borderRadius: 14,
+  padding: 12,
+  background: "#fff",
   display: "grid",
-  gridTemplateColumns:
-    "1fr 0.6fr 0.9fr 1.2fr 1fr 1fr 0.85fr 0.8fr 0.8fr 0.8fr auto",
+  gap: 10,
+};
+
+const paddockRow1Style = {
+  display: "grid",
+  gridTemplateColumns: "1.2fr 0.7fr 1fr 1.3fr",
+  gap: 8,
+  alignItems: "end",
+};
+
+const paddockRow2Style = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr 0.9fr 0.8fr 0.8fr 0.8fr auto",
   gap: 8,
   alignItems: "end",
 };
