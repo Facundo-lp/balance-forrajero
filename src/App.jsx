@@ -492,6 +492,23 @@ function getEffectiveStartMonth(crop) {
   return first.getMonth() + 1;
 }
 
+function getMonthActivationFactor(monthIndex, crop) {
+  const firstDate = getFirstGrazingDate(crop);
+  if (!firstDate) return 1;
+
+  const year = firstDate.getFullYear();
+  const monthStart = new Date(year, monthIndex - 1, 1);
+  const monthEnd = new Date(year, monthIndex, 0);
+
+  if (firstDate > monthEnd) return 0;
+  if (firstDate <= monthStart) return 1;
+
+  const totalDays = monthEnd.getDate();
+  const activeDays = totalDays - firstDate.getDate() + 1;
+
+  return Math.max(0, Math.min(1, activeDays / totalDays));
+}
+
 function monthIsActive(monthIndex, startMonth, endMonth) {
   const start = n(startMonth);
   const end = n(endMonth);
@@ -823,9 +840,11 @@ export default function App() {
             if (resource) {
               const pct = n(resource.monthly[m.key]);
               const monthlyPerHa = resource.annual * (pct / 100);
+              const activationFactor = getMonthActivationFactor(m.index, p);
 
               total +=
                 monthlyPerHa *
+                activationFactor *
                 n(p.hectares) *
                 (n(p.efficiency) / 100) *
                 primaryManagement *
@@ -849,9 +868,11 @@ export default function App() {
             if (secondResource) {
               const pct = n(secondResource.monthly[m.key]);
               const monthlyPerHa = secondResource.annual * (pct / 100);
+              const activationFactor = getMonthActivationFactor(m.index, second);
 
               total +=
                 monthlyPerHa *
+                activationFactor *
                 n(p.hectares) *
                 (n(second.efficiency) / 100) *
                 secondManagement *
@@ -912,7 +933,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 9: doble cultivo en un mismo potrero.
+              Versión 10: doble cultivo y gráfico con activación real.
             </p>
           </div>
 
