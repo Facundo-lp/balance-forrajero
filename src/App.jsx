@@ -49,6 +49,8 @@ const RESOURCE_TYPES = [
   "Verdeo de verano",
 ];
 
+const SECOND_CROP_TYPES = ["Pradera", "Verdeo de invierno", "Verdeo de verano"];
+
 const MANAGEMENT_LEVELS = [
   { label: "Bajo", factor: 0.7 },
   { label: "Medio", factor: 1.0 },
@@ -478,16 +480,14 @@ function addDays(date, days) {
   return d;
 }
 
-function getFirstGrazingDate(paddock) {
-  if (paddock.resourceType === "Campo natural") return null;
-  const sowing = parseLocalDate(paddock.sowingDate);
+function getFirstGrazingDate(crop) {
+  const sowing = parseLocalDate(crop.sowingDate);
   if (!sowing) return null;
-  return addDays(sowing, n(paddock.firstGrazingDays));
+  return addDays(sowing, n(crop.firstGrazingDays));
 }
 
-function getEffectiveStartMonth(paddock) {
-  if (paddock.resourceType === "Campo natural") return 1;
-  const first = getFirstGrazingDate(paddock);
+function getEffectiveStartMonth(crop) {
+  const first = getFirstGrazingDate(crop);
   if (!first) return 1;
   return first.getMonth() + 1;
 }
@@ -516,6 +516,20 @@ function SummaryCard({ title, value }) {
       </div>
     </div>
   );
+}
+
+function defaultSecondCrop() {
+  const firstSubtype = getSubtypeOptions("Verdeo de verano")[0];
+  return {
+    enabled: false,
+    resourceType: "Verdeo de verano",
+    subtype: firstSubtype?.name || "",
+    sowingDate: "",
+    firstGrazingDays: firstSubtype?.defaultFirstGrazingDays ?? 45,
+    endMonth: firstSubtype?.defaultEndMonth ?? 3,
+    efficiency: firstSubtype?.defaultEfficiency ?? 70,
+    management: "Medio",
+  };
 }
 
 export default function App() {
@@ -563,6 +577,7 @@ export default function App() {
         endMonth: 12,
         efficiency: 50,
         management: "Medio",
+        secondCrop: defaultSecondCrop(),
       },
     ]
   );
@@ -649,6 +664,7 @@ export default function App() {
         endMonth: 12,
         efficiency: 50,
         management: "Medio",
+        secondCrop: defaultSecondCrop(),
       },
     ]);
   };
@@ -689,11 +705,43 @@ export default function App() {
           }
         }
 
-        if (!updated.management) {
-          updated.management = "Medio";
-        }
+        if (!updated.management) updated.management = "Medio";
+        if (!updated.secondCrop) updated.secondCrop = defaultSecondCrop();
 
         return updated;
+      })
+    );
+  };
+
+  const updateSecondCrop = (id, key, value) => {
+    setPaddocks((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+
+        const second = { ...(p.secondCrop || defaultSecondCrop()), [key]: value };
+
+        if (key === "resourceType") {
+          const firstSubtype = getSubtypeOptions(value)[0];
+          second.subtype = firstSubtype?.name || "";
+          second.sowingDate = "";
+          second.firstGrazingDays =
+            firstSubtype?.defaultFirstGrazingDays ?? 45;
+          second.endMonth = firstSubtype?.defaultEndMonth ?? 12;
+          second.efficiency = firstSubtype?.defaultEfficiency ?? 70;
+        }
+
+        if (key === "subtype") {
+          const subtypeRow = getSubtypeRow(second.resourceType, value);
+          if (subtypeRow) {
+            second.firstGrazingDays = subtypeRow.defaultFirstGrazingDays;
+            second.endMonth = subtypeRow.defaultEndMonth;
+            second.efficiency = subtypeRow.defaultEfficiency;
+          }
+        }
+
+        if (!second.management) second.management = "Medio";
+
+        return { ...p, secondCrop: second };
       })
     );
   };
@@ -746,47 +794,73 @@ export default function App() {
 
     const offerByMonth = MONTHS.map((m) => {
       return paddocks.reduce((sum, p) => {
-        const startMonth =
-          p.resourceType === "Campo natural" ? 1 : getEffectiveStartMonth(p);
+        let total = sum;
 
-        if (!monthIsActive(m.index, startMonth, p.endMonth)) return sum;
-
-        const managementFactor =
+        const primaryManagement =
           MANAGEMENT_LEVELS.find((lvl) => lvl.label === p.management)?.factor ??
           1;
 
         if (p.resourceType === "Campo natural") {
-          const row = getFieldNaturalRow(farm.region, p.environment);
-          if (!row) return sum;
+          if (monthIsActive(m.index, 1, p.endMonth)) {
+            const row = getFieldNaturalRow(farm.region, p.environment);
+            if (row) {
+              const dist = seasonToMonthly(row);
+              const pct = n(dist[m.key]);
+              const monthlyPerHa = row.annual * (pct / 100);
 
-          const dist = seasonToMonthly(row);
-          const pct = n(dist[m.key]);
-          const monthlyPerHa = row.annual * (pct / 100);
+              total +=
+                monthlyPerHa *
+                n(p.hectares) *
+                (n(p.efficiency) / 100) *
+                primaryManagement *
+                climateFactor;
+            }
+          }
+        } else {
+          const startMonth = getEffectiveStartMonth(p);
+          if (monthIsActive(m.index, startMonth, p.endMonth)) {
+            const resource = getSubtypeRow(p.resourceType, p.subtype);
+            if (resource) {
+              const pct = n(resource.monthly[m.key]);
+              const monthlyPerHa = resource.annual * (pct / 100);
 
-          return (
-            sum +
-            monthlyPerHa *
-              n(p.hectares) *
-              (n(p.efficiency) / 100) *
-              managementFactor *
-              climateFactor
-          );
+              total +=
+                monthlyPerHa *
+                n(p.hectares) *
+                (n(p.efficiency) / 100) *
+                primaryManagement *
+                climateFactor;
+            }
+          }
         }
 
-        const resource = getSubtypeRow(p.resourceType, p.subtype);
-        if (!resource) return sum;
+        if (p.secondCrop?.enabled) {
+          const second = p.secondCrop;
+          const secondManagement =
+            MANAGEMENT_LEVELS.find((lvl) => lvl.label === second.management)
+              ?.factor ?? 1;
+          const secondStart = getEffectiveStartMonth(second);
 
-        const pct = n(resource.monthly[m.key]);
-        const monthlyPerHa = resource.annual * (pct / 100);
+          if (monthIsActive(m.index, secondStart, second.endMonth)) {
+            const secondResource = getSubtypeRow(
+              second.resourceType,
+              second.subtype
+            );
+            if (secondResource) {
+              const pct = n(secondResource.monthly[m.key]);
+              const monthlyPerHa = secondResource.annual * (pct / 100);
 
-        return (
-          sum +
-          monthlyPerHa *
-            n(p.hectares) *
-            (n(p.efficiency) / 100) *
-            managementFactor *
-            climateFactor
-        );
+              total +=
+                monthlyPerHa *
+                n(p.hectares) *
+                (n(second.efficiency) / 100) *
+                secondManagement *
+                climateFactor;
+            }
+          }
+        }
+
+        return total;
       }, 0);
     });
 
@@ -838,7 +912,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 8: año climático, fecha de siembra y primer pastoreo.
+              Versión 9: doble cultivo en un mismo potrero.
             </p>
           </div>
 
@@ -971,6 +1045,12 @@ export default function App() {
                   ? firstGrazingDate.toLocaleDateString("es-UY")
                   : "No aplica";
 
+                const second = p.secondCrop || defaultSecondCrop();
+                const secondFirstDate = getFirstGrazingDate(second);
+                const secondFirstText = secondFirstDate
+                  ? secondFirstDate.toLocaleDateString("es-UY")
+                  : "No aplica";
+
                 return (
                   <div key={p.id} style={paddockCardStyle}>
                     <div style={paddockRow1Style}>
@@ -998,7 +1078,7 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label style={smallLabelStyle}>Recurso</label>
+                        <label style={smallLabelStyle}>Recurso 1</label>
                         <select
                           value={p.resourceType}
                           onChange={(e) =>
@@ -1029,7 +1109,7 @@ export default function App() {
                         </div>
                       ) : (
                         <div>
-                          <label style={smallLabelStyle}>Subtipo</label>
+                          <label style={smallLabelStyle}>Subtipo 1</label>
                           <select
                             value={p.subtype}
                             onChange={(e) =>
@@ -1156,6 +1236,24 @@ export default function App() {
                         />
                       </div>
 
+                      <div>
+                        <label style={smallLabelStyle}>Segundo cultivo</label>
+                        <select
+                          value={second.enabled ? "Sí" : "No"}
+                          onChange={(e) =>
+                            updateSecondCrop(
+                              p.id,
+                              "enabled",
+                              e.target.value === "Sí"
+                            )
+                          }
+                          style={inputStyle}
+                        >
+                          <option>No</option>
+                          <option>Sí</option>
+                        </select>
+                      </div>
+
                       <div style={{ display: "flex", alignItems: "end" }}>
                         <button
                           onClick={() => removePaddock(p.id)}
@@ -1165,6 +1263,147 @@ export default function App() {
                         </button>
                       </div>
                     </div>
+
+                    {second.enabled && (
+                      <div style={secondCropBoxStyle}>
+                        <div style={secondTitleStyle}>Segundo cultivo</div>
+
+                        <div style={paddockRow1Style}>
+                          <div>
+                            <label style={smallLabelStyle}>Recurso 2</label>
+                            <select
+                              value={second.resourceType}
+                              onChange={(e) =>
+                                updateSecondCrop(
+                                  p.id,
+                                  "resourceType",
+                                  e.target.value
+                                )
+                              }
+                              style={inputStyle}
+                            >
+                              {SECOND_CROP_TYPES.map((r) => (
+                                <option key={r}>{r}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={smallLabelStyle}>Subtipo 2</label>
+                            <select
+                              value={second.subtype}
+                              onChange={(e) =>
+                                updateSecondCrop(p.id, "subtype", e.target.value)
+                              }
+                              style={inputStyle}
+                            >
+                              {getSubtypeOptions(second.resourceType).map((s) => (
+                                <option key={s.name}>{s.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={smallLabelStyle}>Fecha siembra</label>
+                            <input
+                              type="date"
+                              value={second.sowingDate}
+                              onChange={(e) =>
+                                updateSecondCrop(
+                                  p.id,
+                                  "sowingDate",
+                                  e.target.value
+                                )
+                              }
+                              style={inputStyle}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={smallLabelStyle}>1er pastoreo</label>
+                            <input
+                              value={secondFirstText}
+                              disabled
+                              style={{ ...inputStyle, background: "#f1f5f9" }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={paddockRow2Style}>
+                          <div>
+                            <label style={smallLabelStyle}>Días a pastoreo</label>
+                            <input
+                              type="number"
+                              value={second.firstGrazingDays}
+                              onChange={(e) =>
+                                updateSecondCrop(
+                                  p.id,
+                                  "firstGrazingDays",
+                                  e.target.value
+                                )
+                              }
+                              style={inputStyle}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={smallLabelStyle}>Mes fin</label>
+                            <select
+                              value={second.endMonth}
+                              onChange={(e) =>
+                                updateSecondCrop(
+                                  p.id,
+                                  "endMonth",
+                                  Number(e.target.value)
+                                )
+                              }
+                              style={inputStyle}
+                            >
+                              {MONTH_OPTIONS.map((m) => (
+                                <option key={m.value} value={m.value}>
+                                  {m.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={smallLabelStyle}>Manejo</label>
+                            <select
+                              value={second.management}
+                              onChange={(e) =>
+                                updateSecondCrop(
+                                  p.id,
+                                  "management",
+                                  e.target.value
+                                )
+                              }
+                              style={inputStyle}
+                            >
+                              {MANAGEMENT_LEVELS.map((lvl) => (
+                                <option key={lvl.label}>{lvl.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={smallLabelStyle}>Eficiencia %</label>
+                            <input
+                              type="number"
+                              value={second.efficiency}
+                              onChange={(e) =>
+                                updateSecondCrop(
+                                  p.id,
+                                  "efficiency",
+                                  e.target.value
+                                )
+                              }
+                              style={inputStyle}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1421,6 +1660,20 @@ const paddockCardStyle = {
   gap: 10,
 };
 
+const secondCropBoxStyle = {
+  marginTop: 8,
+  borderTop: "1px dashed #cbd5e1",
+  paddingTop: 10,
+  display: "grid",
+  gap: 10,
+};
+
+const secondTitleStyle = {
+  fontSize: 14,
+  fontWeight: 700,
+  color: "#0f172a",
+};
+
 const paddockRow1Style = {
   display: "grid",
   gridTemplateColumns: "1.2fr 0.7fr 1fr 1.3fr",
@@ -1430,7 +1683,7 @@ const paddockRow1Style = {
 
 const paddockRow2Style = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr 0.9fr 0.8fr 0.8fr 0.8fr auto",
+  gridTemplateColumns: "1fr 1fr 0.9fr 0.8fr 0.8fr 0.8fr 0.9fr auto",
   gap: 8,
   alignItems: "end",
 };
