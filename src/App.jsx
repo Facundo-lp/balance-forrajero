@@ -44,12 +44,20 @@ const REGIONS = [
 
 const RESOURCE_TYPES = [
   "Campo natural",
-  "Pradera",
+  "Campo natural mejorado",
+  "Pradera bianual",
+  "Pradera perenne",
   "Verdeo de invierno",
   "Verdeo de verano",
 ];
 
-const SECOND_CROP_TYPES = ["Pradera", "Verdeo de invierno", "Verdeo de verano"];
+const SECOND_CROP_TYPES = [
+  "Campo natural mejorado",
+  "Pradera bianual",
+  "Pradera perenne",
+  "Verdeo de invierno",
+  "Verdeo de verano",
+];
 
 const MANAGEMENT_LEVELS = [
   { label: "Bajo", factor: 0.7 },
@@ -220,23 +228,107 @@ const FIELD_NATURAL_TABLE = [
 ];
 
 const SEEDED_SUBTYPES = {
-  Pradera: [
+  "Campo natural mejorado": [
+    {
+      name: "Campo natural + raigrás",
+      annual: 3500,
+      monthly: {
+        ene: 12, feb: 10, mar: 10, abr: 10, may: 9, jun: 6,
+        jul: 5, ago: 6, sep: 9, oct: 10, nov: 7, dic: 6,
+      },
+      defaultFirstGrazingDays: 40,
+      defaultEndMonth: 12,
+      defaultEfficiency: 55,
+    },
+    {
+      name: "Campo natural + lotus rincón",
+      annual: 3800,
+      monthly: {
+        ene: 14, feb: 12, mar: 10, abr: 8, may: 7, jun: 5,
+        jul: 4, ago: 5, sep: 8, oct: 10, nov: 9, dic: 8,
+      },
+      defaultFirstGrazingDays: 60,
+      defaultEndMonth: 12,
+      defaultEfficiency: 55,
+    },
+    {
+      name: "Campo natural + raigrás + lotus",
+      annual: 4500,
+      monthly: {
+        ene: 12, feb: 10, mar: 10, abr: 10, may: 9, jun: 7,
+        jul: 6, ago: 7, sep: 10, oct: 10, nov: 5, dic: 4,
+      },
+      defaultFirstGrazingDays: 45,
+      defaultEndMonth: 12,
+      defaultEfficiency: 60,
+    },
+    {
+      name: "Campo natural + trébol blanco + raigrás",
+      annual: 4300,
+      monthly: {
+        ene: 11, feb: 9, mar: 10, abr: 10, may: 9, jun: 7,
+        jul: 6, ago: 7, sep: 10, oct: 11, nov: 6, dic: 4,
+      },
+      defaultFirstGrazingDays: 45,
+      defaultEndMonth: 12,
+      defaultEfficiency: 58,
+    },
+  ],
+
+  "Pradera bianual": [
+    {
+      name: "Raigrás + trébol rojo",
+      annual: 9000,
+      monthly: {
+        ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6,
+        jul: 6, ago: 8, sep: 12, oct: 14, nov: 10, dic: 6,
+      },
+      defaultFirstGrazingDays: 70,
+      defaultEndMonth: 12,
+      defaultEfficiency: 65,
+    },
+    {
+      name: "Holcus + trébol rojo",
+      annual: 7800,
+      monthly: {
+        ene: 9, feb: 8, mar: 8, abr: 7, may: 6, jun: 5,
+        jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10,
+      },
+      defaultFirstGrazingDays: 80,
+      defaultEndMonth: 12,
+      defaultEfficiency: 62,
+    },
+    {
+      name: "Raigrás + achicoria + trébol rojo",
+      annual: 9500,
+      monthly: {
+        ene: 10, feb: 9, mar: 8, abr: 8, may: 7, jun: 6,
+        jul: 5, ago: 7, sep: 11, oct: 13, nov: 10, dic: 6,
+      },
+      defaultFirstGrazingDays: 70,
+      defaultEndMonth: 12,
+      defaultEfficiency: 65,
+    },
+    {
+      name: "Cebadilla + trébol rojo",
+      annual: 8200,
+      monthly: {
+        ene: 9, feb: 8, mar: 8, abr: 7, may: 6, jun: 5,
+        jul: 5, ago: 7, sep: 11, oct: 13, nov: 12, dic: 9,
+      },
+      defaultFirstGrazingDays: 80,
+      defaultEndMonth: 12,
+      defaultEfficiency: 63,
+    },
+  ],
+
+  "Pradera perenne": [
     {
       name: "Festuca + trébol blanco + lotus",
       annual: 8500,
       monthly: {
-        ene: 9,
-        feb: 7,
-        mar: 7,
-        abr: 7,
-        may: 6,
-        jun: 5,
-        jul: 5,
-        ago: 7,
-        sep: 10,
-        oct: 13,
-        nov: 13,
-        dic: 11,
+        ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5,
+        jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11,
       },
       defaultFirstGrazingDays: 90,
       defaultEndMonth: 12,
@@ -246,18 +338,8 @@ const SEEDED_SUBTYPES = {
       name: "Dactylis + trébol blanco + trébol rojo",
       annual: 9000,
       monthly: {
-        ene: 10,
-        feb: 8,
-        mar: 7,
-        abr: 7,
-        may: 6,
-        jun: 5,
-        jul: 5,
-        ago: 7,
-        sep: 10,
-        oct: 13,
-        nov: 12,
-        dic: 10,
+        ene: 10, feb: 8, mar: 7, abr: 7, may: 6, jun: 5,
+        jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10,
       },
       defaultFirstGrazingDays: 90,
       defaultEndMonth: 12,
@@ -267,41 +349,33 @@ const SEEDED_SUBTYPES = {
       name: "Raigrás perenne + trébol blanco",
       annual: 8200,
       monthly: {
-        ene: 8,
-        feb: 7,
-        mar: 8,
-        abr: 8,
-        may: 7,
-        jun: 6,
-        jul: 6,
-        ago: 8,
-        sep: 11,
-        oct: 13,
-        nov: 11,
-        dic: 7,
+        ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6,
+        jul: 6, ago: 8, sep: 11, oct: 13, nov: 11, dic: 7,
       },
       defaultFirstGrazingDays: 75,
       defaultEndMonth: 12,
       defaultEfficiency: 65,
     },
+    {
+      name: "Festuca + lotus",
+      annual: 7500,
+      monthly: {
+        ene: 10, feb: 9, mar: 8, abr: 7, may: 6, jun: 5,
+        jul: 5, ago: 6, sep: 9, oct: 12, nov: 12, dic: 9,
+      },
+      defaultFirstGrazingDays: 90,
+      defaultEndMonth: 12,
+      defaultEfficiency: 65,
+    },
   ],
+
   "Verdeo de invierno": [
     {
       name: "Raigrás anual",
       annual: 9500,
       monthly: {
-        ene: 0,
-        feb: 0,
-        mar: 0,
-        abr: 0,
-        may: 8,
-        jun: 15,
-        jul: 20,
-        ago: 22,
-        sep: 20,
-        oct: 10,
-        nov: 5,
-        dic: 0,
+        ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15,
+        jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0,
       },
       defaultFirstGrazingDays: 60,
       defaultEndMonth: 10,
@@ -311,18 +385,8 @@ const SEEDED_SUBTYPES = {
       name: "Avena",
       annual: 8500,
       monthly: {
-        ene: 0,
-        feb: 0,
-        mar: 0,
-        abr: 0,
-        may: 12,
-        jun: 20,
-        jul: 23,
-        ago: 20,
-        sep: 15,
-        oct: 8,
-        nov: 2,
-        dic: 0,
+        ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20,
+        jul: 23, ago: 20, sep: 15, oct: 8, nov: 2, dic: 0,
       },
       defaultFirstGrazingDays: 45,
       defaultEndMonth: 10,
@@ -332,41 +396,44 @@ const SEEDED_SUBTYPES = {
       name: "Avena + raigrás",
       annual: 9800,
       monthly: {
-        ene: 0,
-        feb: 0,
-        mar: 0,
-        abr: 0,
-        may: 10,
-        jun: 18,
-        jul: 22,
-        ago: 22,
-        sep: 17,
-        oct: 9,
-        nov: 2,
-        dic: 0,
+        ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18,
+        jul: 22, ago: 22, sep: 17, oct: 9, nov: 2, dic: 0,
+      },
+      defaultFirstGrazingDays: 50,
+      defaultEndMonth: 10,
+      defaultEfficiency: 70,
+    },
+    {
+      name: "Raigrás tetraploide",
+      annual: 10500,
+      monthly: {
+        ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18,
+        jul: 22, ago: 22, sep: 18, oct: 8, nov: 2, dic: 0,
+      },
+      defaultFirstGrazingDays: 55,
+      defaultEndMonth: 10,
+      defaultEfficiency: 70,
+    },
+    {
+      name: "Avena + trébol rojo",
+      annual: 9000,
+      monthly: {
+        ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20,
+        jul: 22, ago: 20, sep: 16, oct: 8, nov: 2, dic: 0,
       },
       defaultFirstGrazingDays: 50,
       defaultEndMonth: 10,
       defaultEfficiency: 70,
     },
   ],
+
   "Verdeo de verano": [
     {
       name: "Sudangrás",
       annual: 13000,
       monthly: {
-        ene: 20,
-        feb: 18,
-        mar: 10,
-        abr: 3,
-        may: 0,
-        jun: 0,
-        jul: 0,
-        ago: 0,
-        sep: 0,
-        oct: 0,
-        nov: 14,
-        dic: 35,
+        ene: 20, feb: 18, mar: 10, abr: 3, may: 0, jun: 0,
+        jul: 0, ago: 0, sep: 0, oct: 0, nov: 14, dic: 35,
       },
       defaultFirstGrazingDays: 45,
       defaultEndMonth: 3,
@@ -376,18 +443,8 @@ const SEEDED_SUBTYPES = {
       name: "Sorgo forrajero",
       annual: 14500,
       monthly: {
-        ene: 22,
-        feb: 20,
-        mar: 12,
-        abr: 4,
-        may: 0,
-        jun: 0,
-        jul: 0,
-        ago: 0,
-        sep: 0,
-        oct: 0,
-        nov: 12,
-        dic: 30,
+        ene: 22, feb: 20, mar: 12, abr: 4, may: 0, jun: 0,
+        jul: 0, ago: 0, sep: 0, oct: 0, nov: 12, dic: 30,
       },
       defaultFirstGrazingDays: 50,
       defaultEndMonth: 3,
@@ -397,18 +454,8 @@ const SEEDED_SUBTYPES = {
       name: "Moha",
       annual: 9000,
       monthly: {
-        ene: 28,
-        feb: 25,
-        mar: 12,
-        abr: 0,
-        may: 0,
-        jun: 0,
-        jul: 0,
-        ago: 0,
-        sep: 0,
-        oct: 0,
-        nov: 10,
-        dic: 25,
+        ene: 28, feb: 25, mar: 12, abr: 0, may: 0, jun: 0,
+        jul: 0, ago: 0, sep: 0, oct: 0, nov: 10, dic: 25,
       },
       defaultFirstGrazingDays: 35,
       defaultEndMonth: 2,
@@ -933,7 +980,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 10: doble cultivo y gráfico con activación real.
+              Versión 12: recursos ordenados para Uruguay.
             </p>
           </div>
 
