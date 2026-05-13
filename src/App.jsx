@@ -596,6 +596,19 @@ function defaultSecondCrop() {
   };
 }
 
+function defaultSupplement() {
+  return {
+    enabled: false,
+    category: "Vaca cría",
+    heads: 0,
+    kgAsFedPerHeadPerDay: 2,
+    dmPercent: 90,
+    substitutionRate: 0.3,
+    monthStart: 6,
+    monthEnd: 8,
+  };
+}
+
 export default function App() {
   const loadSaved = () => {
     try {
@@ -624,6 +637,7 @@ export default function App() {
       name: "Mi establecimiento",
       region: "Sierras del Este",
       climate: "Normal",
+      supplement: defaultSupplement(),
     }
   );
 
@@ -681,7 +695,10 @@ export default function App() {
   };
 
   const loadFarm = (f) => {
-    setFarm(f.farm);
+    setFarm({
+      ...f.farm,
+      supplement: f.farm.supplement || defaultSupplement(),
+    });
     setPaddocks(f.paddocks);
     setHerd(f.herd);
   };
@@ -696,10 +713,14 @@ export default function App() {
       m.label,
       Math.round(results.offerByMonth[i]),
       Math.round(results.demandByMonth[i]),
-      Math.round(results.balanceByMonth[i]),
+      Math.round(results.supplementEffectiveByMonth[i]),
+      Math.round(results.adjustedBalanceByMonth[i]),
     ]);
 
-    const csv = [["Mes", "Oferta", "Demanda", "Balance"], ...rows]
+    const csv = [
+      ["Mes", "Oferta", "Demanda", "Aporte suplemento", "Balance ajustado"],
+      ...rows,
+    ]
       .map((e) => e.join(","))
       .join("\n");
 
@@ -707,7 +728,7 @@ export default function App() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "balance_forrajero.csv";
+    a.download = "balance_forrajero_ajustado.csv";
     a.click();
   };
 
@@ -852,9 +873,21 @@ export default function App() {
     setHerd((prev) => prev.filter((h) => h.id !== id));
   };
 
+  const updateSupplement = (key, value) => {
+    setFarm((prev) => ({
+      ...prev,
+      supplement: {
+        ...(prev.supplement || defaultSupplement()),
+        [key]: value,
+      },
+    }));
+  };
+
   const results = useMemo(() => {
     const climateFactor =
       CLIMATE_SCENARIOS.find((c) => c.label === farm.climate)?.factor ?? 1;
+
+    const supplement = farm.supplement || defaultSupplement();
 
     const offerByMonth = MONTHS.map((m) => {
       return paddocks.reduce((sum, p) => {
@@ -939,13 +972,47 @@ export default function App() {
       }, 0);
     });
 
+    const supplementAsFedByMonth = MONTHS.map((m) => {
+      if (!supplement.enabled) return 0;
+      if (!monthIsActive(m.index, supplement.monthStart, supplement.monthEnd)) {
+        return 0;
+      }
+      return (
+        n(supplement.heads) *
+        n(supplement.kgAsFedPerHeadPerDay) *
+        m.days
+      );
+    });
+
+    const supplementDmByMonth = MONTHS.map((m, i) => {
+      if (!supplement.enabled) return 0;
+      return supplementAsFedByMonth[i] * (n(supplement.dmPercent) / 100);
+    });
+
+    const supplementEffectiveByMonth = MONTHS.map((m, i) => {
+      if (!supplement.enabled) return 0;
+      return supplementDmByMonth[i] * (1 - n(supplement.substitutionRate));
+    });
+
     const balanceByMonth = MONTHS.map(
       (_, i) => offerByMonth[i] - demandByMonth[i]
     );
 
+    const adjustedBalanceByMonth = MONTHS.map(
+      (_, i) => balanceByMonth[i] + supplementEffectiveByMonth[i]
+    );
+
     const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
+    const annualSupplementEffective = supplementEffectiveByMonth.reduce(
+      (a, b) => a + b,
+      0
+    );
     const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
+    const annualAdjustedBalance = adjustedBalanceByMonth.reduce(
+      (a, b) => a + b,
+      0
+    );
     const totalPV = herd.reduce((sum, h) => sum + n(h.heads) * n(h.weight), 0);
     const totalArea = paddocks.reduce((sum, p) => sum + n(p.hectares), 0);
     const currentLoad = totalArea > 0 ? totalPV / totalArea : 0;
@@ -955,19 +1022,73 @@ export default function App() {
       oferta: Math.round(offerByMonth[i]),
       demanda: Math.round(demandByMonth[i]),
       balance: Math.round(balanceByMonth[i]),
+      balanceAjustado: Math.round(adjustedBalanceByMonth[i]),
     }));
+
+    const monthlyDeficits = MONTHS.filter((_, i) => balanceByMonth[i] < 0).map(
+      (m) => m.label
+    );
+
+    const monthlyDeficitsAdjusted = MONTHS.filter(
+      (_, i) => adjustedBalanceByMonth[i] < 0
+    ).map((m) => m.label);
+
+    const alerts = [];
+    if (annualBalance < 0) {
+      alerts.push({
+        level: "high",
+        text: "Balance anual negativo sin suplementación.",
+      });
+    }
+    if (annualAdjustedBalance < 0) {
+      alerts.push({
+        level: "high",
+        text: "Balance anual sigue negativo aun con suplementación.",
+      });
+    }
+    if (monthlyDeficits.length > 0) {
+      alerts.push({
+        level: "medium",
+        text: `Déficit mensual sin suplementación en: ${monthlyDeficits.join(", ")}.`,
+      });
+    }
+    if (supplement.enabled && monthlyDeficitsAdjusted.length > 0) {
+      alerts.push({
+        level: "medium",
+        text: `Déficit mensual aún con suplementación en: ${monthlyDeficitsAdjusted.join(", ")}.`,
+      });
+    }
+    if (currentLoad > 850) {
+      alerts.push({
+        level: "medium",
+        text: "Carga alta para un planteo pastoril. Revisar oferta o suplementación.",
+      });
+    }
+    if (supplement.enabled && annualAdjustedBalance > 0 && annualBalance < 0) {
+      alerts.push({
+        level: "low",
+        text: "La suplementación corrige el déficit anual del sistema.",
+      });
+    }
 
     return {
       offerByMonth,
       demandByMonth,
+      supplementAsFedByMonth,
+      supplementDmByMonth,
+      supplementEffectiveByMonth,
       balanceByMonth,
+      adjustedBalanceByMonth,
       annualOffer,
       annualDemand,
+      annualSupplementEffective,
       annualBalance,
+      annualAdjustedBalance,
       totalPV,
       totalArea,
       currentLoad,
       chartData,
+      alerts,
     };
   }, [farm, paddocks, herd]);
 
@@ -980,7 +1101,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 12: recursos ordenados para Uruguay.
+              Versión 13: alertas automáticas y suplementación con ración.
             </p>
           </div>
 
@@ -1093,8 +1214,172 @@ export default function App() {
                 title="Balance anual"
                 value={`${formatNumber(results.annualBalance)} kg MS`}
               />
+              <SummaryCard
+                title="Aporte suplemento"
+                value={`${formatNumber(results.annualSupplementEffective)} kg MS`}
+              />
+              <SummaryCard
+                title="Balance ajustado"
+                value={`${formatNumber(results.annualAdjustedBalance)} kg MS`}
+              />
             </div>
           </div>
+        </div>
+
+        <div style={{ ...panelStyle, marginBottom: 24 }}>
+          <div style={panelHeaderRowStyle}>
+            <h2 style={panelTitleStyle}>Suplementación</h2>
+          </div>
+
+          <div style={supplementGridStyle}>
+            <div>
+              <label style={smallLabelStyle}>Usar suplementación</label>
+              <select
+                value={farm.supplement?.enabled ? "Sí" : "No"}
+                onChange={(e) =>
+                  updateSupplement("enabled", e.target.value === "Sí")
+                }
+                style={inputStyle}
+              >
+                <option>No</option>
+                <option>Sí</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={smallLabelStyle}>Categoría</label>
+              <select
+                value={farm.supplement?.category || "Vaca cría"}
+                onChange={(e) => updateSupplement("category", e.target.value)}
+                style={inputStyle}
+              >
+                {ANIMAL_CATEGORIES.map((a) => (
+                  <option key={a.label}>{a.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={smallLabelStyle}>Cabezas suplementadas</label>
+              <input
+                type="number"
+                value={farm.supplement?.heads ?? 0}
+                onChange={(e) => updateSupplement("heads", e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={smallLabelStyle}>Kg ración/animal/día</label>
+              <input
+                type="number"
+                step="0.1"
+                value={farm.supplement?.kgAsFedPerHeadPerDay ?? 2}
+                onChange={(e) =>
+                  updateSupplement("kgAsFedPerHeadPerDay", e.target.value)
+                }
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={smallLabelStyle}>% MS</label>
+              <input
+                type="number"
+                step="1"
+                value={farm.supplement?.dmPercent ?? 90}
+                onChange={(e) => updateSupplement("dmPercent", e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={smallLabelStyle}>Tasa sustitución</label>
+              <input
+                type="number"
+                step="0.01"
+                value={farm.supplement?.substitutionRate ?? 0.3}
+                onChange={(e) =>
+                  updateSupplement("substitutionRate", e.target.value)
+                }
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={smallLabelStyle}>Mes inicio</label>
+              <select
+                value={farm.supplement?.monthStart ?? 6}
+                onChange={(e) =>
+                  updateSupplement("monthStart", Number(e.target.value))
+                }
+                style={inputStyle}
+              >
+                {MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={smallLabelStyle}>Mes fin</label>
+              <select
+                value={farm.supplement?.monthEnd ?? 8}
+                onChange={(e) =>
+                  updateSupplement("monthEnd", Number(e.target.value))
+                }
+                style={inputStyle}
+              >
+                {MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ ...panelStyle, marginBottom: 24 }}>
+          <h2 style={panelTitleStyle}>Alertas automáticas</h2>
+          {results.alerts.length === 0 ? (
+            <div style={{ color: "#166534", fontWeight: 600 }}>
+              No se detectan alertas importantes con la configuración actual.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {results.alerts.map((alert, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    ...alertBoxStyle,
+                    background:
+                      alert.level === "high"
+                        ? "#fee2e2"
+                        : alert.level === "medium"
+                        ? "#fef3c7"
+                        : "#dcfce7",
+                    borderColor:
+                      alert.level === "high"
+                        ? "#fecaca"
+                        : alert.level === "medium"
+                        ? "#fde68a"
+                        : "#86efac",
+                    color:
+                      alert.level === "high"
+                        ? "#991b1b"
+                        : alert.level === "medium"
+                        ? "#92400e"
+                        : "#166534",
+                  }}
+                >
+                  {alert.text}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={midGridStyle}>
@@ -1583,6 +1868,12 @@ export default function App() {
                   stroke="#2563eb"
                   strokeWidth={3}
                 />
+                <Line
+                  type="monotone"
+                  dataKey="balanceAjustado"
+                  stroke="#7c3aed"
+                  strokeWidth={3}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1597,7 +1888,9 @@ export default function App() {
                   <th style={thStyle}>Mes</th>
                   <th style={thStyle}>Oferta</th>
                   <th style={thStyle}>Demanda</th>
+                  <th style={thStyle}>Aporte suplemento</th>
                   <th style={thStyle}>Balance</th>
+                  <th style={thStyle}>Balance ajustado</th>
                 </tr>
               </thead>
               <tbody>
@@ -1610,6 +1903,9 @@ export default function App() {
                     <td style={tdStyle}>
                       {formatNumber(results.demandByMonth[i])}
                     </td>
+                    <td style={tdStyle}>
+                      {formatNumber(results.supplementEffectiveByMonth[i])}
+                    </td>
                     <td
                       style={{
                         ...tdStyle,
@@ -1621,6 +1917,18 @@ export default function App() {
                       }}
                     >
                       {formatNumber(results.balanceByMonth[i])}
+                    </td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        color:
+                          results.adjustedBalanceByMonth[i] < 0
+                            ? "#dc2626"
+                            : "#7c3aed",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatNumber(results.adjustedBalanceByMonth[i])}
                     </td>
                   </tr>
                 ))}
@@ -1679,6 +1987,12 @@ const midGridStyle = {
   marginBottom: 24,
 };
 
+const supplementGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(180px, 1fr))",
+  gap: 12,
+};
+
 const panelStyle = {
   background: "#f8fafc",
   border: "1px solid #e2e8f0",
@@ -1701,7 +2015,7 @@ const panelHeaderRowStyle = {
 
 const summaryGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  gridTemplateColumns: "1fr 1fr 1fr",
   gap: 12,
 };
 
@@ -1710,6 +2024,13 @@ const summaryCardStyle = {
   border: "1px solid #e2e8f0",
   borderRadius: 16,
   padding: 16,
+};
+
+const alertBoxStyle = {
+  border: "1px solid",
+  borderRadius: 12,
+  padding: 12,
+  fontWeight: 600,
 };
 
 const boxStyle = {
