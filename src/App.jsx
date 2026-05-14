@@ -81,386 +81,54 @@ const ANIMAL_CATEGORIES = [
 ];
 
 const FIELD_NATURAL_TABLE = [
-  {
-    region: "Sierras del Este",
-    environment: "Serrano superficial",
-    annual: 1500,
-    autumn: 28,
-    winter: 5,
-    spring: 26,
-    summer: 41,
-  },
-  {
-    region: "Sierras del Este",
-    environment: "Serrano medio",
-    annual: 2200,
-    autumn: 26,
-    winter: 7,
-    spring: 28,
-    summer: 39,
-  },
-  {
-    region: "Sierras del Este",
-    environment: "Serrano profundo",
-    annual: 2800,
-    autumn: 24,
-    winter: 9,
-    spring: 30,
-    summer: 37,
-  },
-  {
-    region: "Lomadas del Este",
-    environment: "General",
-    annual: 3426,
-    autumn: 26,
-    winter: 15,
-    spring: 35,
-    summer: 24,
-  },
-  {
-    region: "Basalto",
-    environment: "Superficial",
-    annual: 2885,
-    autumn: 28,
-    winter: 15,
-    spring: 40,
-    summer: 17,
-  },
-  {
-    region: "Basalto",
-    environment: "Profundo",
-    annual: 4000,
-    autumn: 25,
-    winter: 12,
-    spring: 44,
-    summer: 19,
-  },
-  {
-    region: "Cristalino / Centro Sur",
-    environment: "Superficial",
-    annual: 2316,
-    autumn: 22,
-    winter: 22,
-    spring: 21,
-    summer: 35,
-  },
-  {
-    region: "Cristalino / Centro Sur",
-    environment: "Brunosol subeútrico",
-    annual: 3206,
-    autumn: 22,
-    winter: 18,
-    spring: 27,
-    summer: 33,
-  },
-  {
-    region: "Cristalino / Centro Sur",
-    environment: "Brunosol eútrico",
-    annual: 3665,
-    autumn: 21,
-    winter: 16,
-    spring: 28,
-    summer: 35,
-  },
-  {
-    region: "Areniscas",
-    environment: "Ladera alta",
-    annual: 5144,
-    autumn: 13,
-    winter: 7,
-    spring: 31,
-    summer: 49,
-  },
-  {
-    region: "Cretácico",
-    environment: "Agrio",
-    annual: 5530,
-    autumn: 23,
-    winter: 15,
-    spring: 28,
-    summer: 34,
-  },
-  {
-    region: "Litoral",
-    environment: "General",
-    annual: 6000,
-    autumn: 24,
-    winter: 16,
-    spring: 34,
-    summer: 26,
-  },
-  {
-    region: "Litoral Sur",
-    environment: "General agrícola-ganadero",
-    annual: 7000,
-    autumn: 25,
-    winter: 18,
-    spring: 36,
-    summer: 21,
-  },
-  {
-    region: "Llanuras del Este / Cuenca Laguna Merín",
-    environment: "Tendido alto",
-    annual: 3000,
-    autumn: 22,
-    winter: 10,
-    spring: 28,
-    summer: 40,
-  },
-  {
-    region: "Llanuras del Este / Cuenca Laguna Merín",
-    environment: "Plano medio",
-    annual: 3800,
-    autumn: 21,
-    winter: 11,
-    spring: 30,
-    summer: 38,
-  },
-  {
-    region: "Llanuras del Este / Cuenca Laguna Merín",
-    environment: "Bajo dulce/húmedo",
-    annual: 4500,
-    autumn: 20,
-    winter: 14,
-    spring: 31,
-    summer: 35,
-  },
+  { region: "Sierras del Este", environment: "Serrano superficial", annual: 1500, autumn: 28, winter: 5, spring: 26, summer: 41 },
+  { region: "Sierras del Este", environment: "Serrano medio", annual: 2200, autumn: 26, winter: 7, spring: 28, summer: 39 },
+  { region: "Sierras del Este", environment: "Serrano profundo", annual: 2800, autumn: 24, winter: 9, spring: 30, summer: 37 },
+  { region: "Lomadas del Este", environment: "General", annual: 3426, autumn: 26, winter: 15, spring: 35, summer: 24 },
+  { region: "Basalto", environment: "Superficial", annual: 2885, autumn: 28, winter: 15, spring: 40, summer: 17 },
+  { region: "Basalto", environment: "Profundo", annual: 4000, autumn: 25, winter: 12, spring: 44, summer: 19 },
+  { region: "Cristalino / Centro Sur", environment: "Superficial", annual: 2316, autumn: 22, winter: 22, spring: 21, summer: 35 },
+  { region: "Cristalino / Centro Sur", environment: "Brunosol subeútrico", annual: 3206, autumn: 22, winter: 18, spring: 27, summer: 33 },
+  { region: "Cristalino / Centro Sur", environment: "Brunosol eútrico", annual: 3665, autumn: 21, winter: 16, spring: 28, summer: 35 },
+  { region: "Areniscas", environment: "Ladera alta", annual: 5144, autumn: 13, winter: 7, spring: 31, summer: 49 },
+  { region: "Cretácico", environment: "Agrio", annual: 5530, autumn: 23, winter: 15, spring: 28, summer: 34 },
+  { region: "Litoral", environment: "General", annual: 6000, autumn: 24, winter: 16, spring: 34, summer: 26 },
+  { region: "Litoral Sur", environment: "General agrícola-ganadero", annual: 7000, autumn: 25, winter: 18, spring: 36, summer: 21 },
+  { region: "Llanuras del Este / Cuenca Laguna Merín", environment: "Tendido alto", annual: 3000, autumn: 22, winter: 10, spring: 28, summer: 40 },
+  { region: "Llanuras del Este / Cuenca Laguna Merín", environment: "Plano medio", annual: 3800, autumn: 21, winter: 11, spring: 30, summer: 38 },
+  { region: "Llanuras del Este / Cuenca Laguna Merín", environment: "Bajo dulce/húmedo", annual: 4500, autumn: 20, winter: 14, spring: 31, summer: 35 },
 ];
 
 const SEEDED_SUBTYPES = {
   "Campo natural mejorado": [
-    {
-      name: "Campo natural + raigrás",
-      annual: 3500,
-      monthly: {
-        ene: 12, feb: 10, mar: 10, abr: 10, may: 9, jun: 6,
-        jul: 5, ago: 6, sep: 9, oct: 10, nov: 7, dic: 6,
-      },
-      defaultFirstGrazingDays: 40,
-      defaultEndMonth: 12,
-      defaultEfficiency: 55,
-    },
-    {
-      name: "Campo natural + lotus rincón",
-      annual: 3800,
-      monthly: {
-        ene: 14, feb: 12, mar: 10, abr: 8, may: 7, jun: 5,
-        jul: 4, ago: 5, sep: 8, oct: 10, nov: 9, dic: 8,
-      },
-      defaultFirstGrazingDays: 60,
-      defaultEndMonth: 12,
-      defaultEfficiency: 55,
-    },
-    {
-      name: "Campo natural + raigrás + lotus",
-      annual: 4500,
-      monthly: {
-        ene: 12, feb: 10, mar: 10, abr: 10, may: 9, jun: 7,
-        jul: 6, ago: 7, sep: 10, oct: 10, nov: 5, dic: 4,
-      },
-      defaultFirstGrazingDays: 45,
-      defaultEndMonth: 12,
-      defaultEfficiency: 60,
-    },
-    {
-      name: "Campo natural + trébol blanco + raigrás",
-      annual: 4300,
-      monthly: {
-        ene: 11, feb: 9, mar: 10, abr: 10, may: 9, jun: 7,
-        jul: 6, ago: 7, sep: 10, oct: 11, nov: 6, dic: 4,
-      },
-      defaultFirstGrazingDays: 45,
-      defaultEndMonth: 12,
-      defaultEfficiency: 58,
-    },
+    { name: "Campo natural + raigrás", annual: 3500, monthly: { ene: 12, feb: 10, mar: 10, abr: 10, may: 9, jun: 6, jul: 5, ago: 6, sep: 9, oct: 10, nov: 7, dic: 6 }, defaultFirstGrazingDays: 40, defaultEndMonth: 12, defaultEfficiency: 55 },
+    { name: "Campo natural + lotus rincón", annual: 3800, monthly: { ene: 14, feb: 12, mar: 10, abr: 8, may: 7, jun: 5, jul: 4, ago: 5, sep: 8, oct: 10, nov: 9, dic: 8 }, defaultFirstGrazingDays: 60, defaultEndMonth: 12, defaultEfficiency: 55 },
+    { name: "Campo natural + raigrás + lotus", annual: 4500, monthly: { ene: 12, feb: 10, mar: 10, abr: 10, may: 9, jun: 7, jul: 6, ago: 7, sep: 10, oct: 10, nov: 5, dic: 4 }, defaultFirstGrazingDays: 45, defaultEndMonth: 12, defaultEfficiency: 60 },
+    { name: "Campo natural + trébol blanco + raigrás", annual: 4300, monthly: { ene: 11, feb: 9, mar: 10, abr: 10, may: 9, jun: 7, jul: 6, ago: 7, sep: 10, oct: 11, nov: 6, dic: 4 }, defaultFirstGrazingDays: 45, defaultEndMonth: 12, defaultEfficiency: 58 },
   ],
-
   "Pradera bianual": [
-    {
-      name: "Raigrás + trébol rojo",
-      annual: 9000,
-      monthly: {
-        ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6,
-        jul: 6, ago: 8, sep: 12, oct: 14, nov: 10, dic: 6,
-      },
-      defaultFirstGrazingDays: 70,
-      defaultEndMonth: 12,
-      defaultEfficiency: 65,
-    },
-    {
-      name: "Holcus + trébol rojo",
-      annual: 7800,
-      monthly: {
-        ene: 9, feb: 8, mar: 8, abr: 7, may: 6, jun: 5,
-        jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10,
-      },
-      defaultFirstGrazingDays: 80,
-      defaultEndMonth: 12,
-      defaultEfficiency: 62,
-    },
-    {
-      name: "Raigrás + achicoria + trébol rojo",
-      annual: 9500,
-      monthly: {
-        ene: 10, feb: 9, mar: 8, abr: 8, may: 7, jun: 6,
-        jul: 5, ago: 7, sep: 11, oct: 13, nov: 10, dic: 6,
-      },
-      defaultFirstGrazingDays: 70,
-      defaultEndMonth: 12,
-      defaultEfficiency: 65,
-    },
-    {
-      name: "Cebadilla + trébol rojo",
-      annual: 8200,
-      monthly: {
-        ene: 9, feb: 8, mar: 8, abr: 7, may: 6, jun: 5,
-        jul: 5, ago: 7, sep: 11, oct: 13, nov: 12, dic: 9,
-      },
-      defaultFirstGrazingDays: 80,
-      defaultEndMonth: 12,
-      defaultEfficiency: 63,
-    },
+    { name: "Raigrás + trébol rojo", annual: 9000, monthly: { ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6, jul: 6, ago: 8, sep: 12, oct: 14, nov: 10, dic: 6 }, defaultFirstGrazingDays: 70, defaultEndMonth: 12, defaultEfficiency: 65 },
+    { name: "Holcus + trébol rojo", annual: 7800, monthly: { ene: 9, feb: 8, mar: 8, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10 }, defaultFirstGrazingDays: 80, defaultEndMonth: 12, defaultEfficiency: 62 },
+    { name: "Raigrás + achicoria + trébol rojo", annual: 9500, monthly: { ene: 10, feb: 9, mar: 8, abr: 8, may: 7, jun: 6, jul: 5, ago: 7, sep: 11, oct: 13, nov: 10, dic: 6 }, defaultFirstGrazingDays: 70, defaultEndMonth: 12, defaultEfficiency: 65 },
+    { name: "Cebadilla + trébol rojo", annual: 8200, monthly: { ene: 9, feb: 8, mar: 8, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 11, oct: 13, nov: 12, dic: 9 }, defaultFirstGrazingDays: 80, defaultEndMonth: 12, defaultEfficiency: 63 },
   ],
-
   "Pradera perenne": [
-    {
-      name: "Festuca + trébol blanco + lotus",
-      annual: 8500,
-      monthly: {
-        ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5,
-        jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11,
-      },
-      defaultFirstGrazingDays: 90,
-      defaultEndMonth: 12,
-      defaultEfficiency: 65,
-    },
-    {
-      name: "Dactylis + trébol blanco + trébol rojo",
-      annual: 9000,
-      monthly: {
-        ene: 10, feb: 8, mar: 7, abr: 7, may: 6, jun: 5,
-        jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10,
-      },
-      defaultFirstGrazingDays: 90,
-      defaultEndMonth: 12,
-      defaultEfficiency: 65,
-    },
-    {
-      name: "Raigrás perenne + trébol blanco",
-      annual: 8200,
-      monthly: {
-        ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6,
-        jul: 6, ago: 8, sep: 11, oct: 13, nov: 11, dic: 7,
-      },
-      defaultFirstGrazingDays: 75,
-      defaultEndMonth: 12,
-      defaultEfficiency: 65,
-    },
-    {
-      name: "Festuca + lotus",
-      annual: 7500,
-      monthly: {
-        ene: 10, feb: 9, mar: 8, abr: 7, may: 6, jun: 5,
-        jul: 5, ago: 6, sep: 9, oct: 12, nov: 12, dic: 9,
-      },
-      defaultFirstGrazingDays: 90,
-      defaultEndMonth: 12,
-      defaultEfficiency: 65,
-    },
+    { name: "Festuca + trébol blanco + lotus", annual: 8500, monthly: { ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11 }, defaultFirstGrazingDays: 90, defaultEndMonth: 12, defaultEfficiency: 65 },
+    { name: "Dactylis + trébol blanco + trébol rojo", annual: 9000, monthly: { ene: 10, feb: 8, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10 }, defaultFirstGrazingDays: 90, defaultEndMonth: 12, defaultEfficiency: 65 },
+    { name: "Raigrás perenne + trébol blanco", annual: 8200, monthly: { ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6, jul: 6, ago: 8, sep: 11, oct: 13, nov: 11, dic: 7 }, defaultFirstGrazingDays: 75, defaultEndMonth: 12, defaultEfficiency: 65 },
+    { name: "Festuca + lotus", annual: 7500, monthly: { ene: 10, feb: 9, mar: 8, abr: 7, may: 6, jun: 5, jul: 5, ago: 6, sep: 9, oct: 12, nov: 12, dic: 9 }, defaultFirstGrazingDays: 90, defaultEndMonth: 12, defaultEfficiency: 65 },
   ],
-
   "Verdeo de invierno": [
-    {
-      name: "Raigrás anual",
-      annual: 9500,
-      monthly: {
-        ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15,
-        jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0,
-      },
-      defaultFirstGrazingDays: 60,
-      defaultEndMonth: 10,
-      defaultEfficiency: 70,
-    },
-    {
-      name: "Avena",
-      annual: 8500,
-      monthly: {
-        ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20,
-        jul: 23, ago: 20, sep: 15, oct: 8, nov: 2, dic: 0,
-      },
-      defaultFirstGrazingDays: 45,
-      defaultEndMonth: 10,
-      defaultEfficiency: 70,
-    },
-    {
-      name: "Avena + raigrás",
-      annual: 9800,
-      monthly: {
-        ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18,
-        jul: 22, ago: 22, sep: 17, oct: 9, nov: 2, dic: 0,
-      },
-      defaultFirstGrazingDays: 50,
-      defaultEndMonth: 10,
-      defaultEfficiency: 70,
-    },
-    {
-      name: "Raigrás tetraploide",
-      annual: 10500,
-      monthly: {
-        ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18,
-        jul: 22, ago: 22, sep: 18, oct: 8, nov: 2, dic: 0,
-      },
-      defaultFirstGrazingDays: 55,
-      defaultEndMonth: 10,
-      defaultEfficiency: 70,
-    },
-    {
-      name: "Avena + trébol rojo",
-      annual: 9000,
-      monthly: {
-        ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20,
-        jul: 22, ago: 20, sep: 16, oct: 8, nov: 2, dic: 0,
-      },
-      defaultFirstGrazingDays: 50,
-      defaultEndMonth: 10,
-      defaultEfficiency: 70,
-    },
+    { name: "Raigrás anual", annual: 9500, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15, jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0 }, defaultFirstGrazingDays: 60, defaultEndMonth: 10, defaultEfficiency: 70 },
+    { name: "Avena", annual: 8500, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20, jul: 23, ago: 20, sep: 15, oct: 8, nov: 2, dic: 0 }, defaultFirstGrazingDays: 45, defaultEndMonth: 10, defaultEfficiency: 70 },
+    { name: "Avena + raigrás", annual: 9800, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18, jul: 22, ago: 22, sep: 17, oct: 9, nov: 2, dic: 0 }, defaultFirstGrazingDays: 50, defaultEndMonth: 10, defaultEfficiency: 70 },
+    { name: "Raigrás tetraploide", annual: 10500, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18, jul: 22, ago: 22, sep: 18, oct: 8, nov: 2, dic: 0 }, defaultFirstGrazingDays: 55, defaultEndMonth: 10, defaultEfficiency: 70 },
+    { name: "Avena + trébol rojo", annual: 9000, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20, jul: 22, ago: 20, sep: 16, oct: 8, nov: 2, dic: 0 }, defaultFirstGrazingDays: 50, defaultEndMonth: 10, defaultEfficiency: 70 },
   ],
-
   "Verdeo de verano": [
-    {
-      name: "Sudangrás",
-      annual: 13000,
-      monthly: {
-        ene: 20, feb: 18, mar: 10, abr: 3, may: 0, jun: 0,
-        jul: 0, ago: 0, sep: 0, oct: 0, nov: 14, dic: 35,
-      },
-      defaultFirstGrazingDays: 45,
-      defaultEndMonth: 3,
-      defaultEfficiency: 70,
-    },
-    {
-      name: "Sorgo forrajero",
-      annual: 14500,
-      monthly: {
-        ene: 22, feb: 20, mar: 12, abr: 4, may: 0, jun: 0,
-        jul: 0, ago: 0, sep: 0, oct: 0, nov: 12, dic: 30,
-      },
-      defaultFirstGrazingDays: 50,
-      defaultEndMonth: 3,
-      defaultEfficiency: 70,
-    },
-    {
-      name: "Moha",
-      annual: 9000,
-      monthly: {
-        ene: 28, feb: 25, mar: 12, abr: 0, may: 0, jun: 0,
-        jul: 0, ago: 0, sep: 0, oct: 0, nov: 10, dic: 25,
-      },
-      defaultFirstGrazingDays: 35,
-      defaultEndMonth: 2,
-      defaultEfficiency: 70,
-    },
+    { name: "Sudangrás", annual: 13000, monthly: { ene: 20, feb: 18, mar: 10, abr: 3, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 14, dic: 35 }, defaultFirstGrazingDays: 45, defaultEndMonth: 3, defaultEfficiency: 70 },
+    { name: "Sorgo forrajero", annual: 14500, monthly: { ene: 22, feb: 20, mar: 12, abr: 4, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 12, dic: 30 }, defaultFirstGrazingDays: 50, defaultEndMonth: 3, defaultEfficiency: 70 },
+    { name: "Moha", annual: 9000, monthly: { ene: 28, feb: 25, mar: 12, abr: 0, may: 0, jun: 0, jul: 0, ago: 0, sep: 0, oct: 0, nov: 10, dic: 25 }, defaultFirstGrazingDays: 35, defaultEndMonth: 2, defaultEfficiency: 70 },
   ],
 };
 
@@ -596,12 +264,15 @@ function defaultSecondCrop() {
   };
 }
 
-function defaultSupplement() {
+function defaultSupplementRow() {
+  const animal = ANIMAL_CATEGORIES[0];
   return {
-    enabled: false,
-    category: "Vaca cría",
+    id: Date.now(),
+    category: animal.label,
     heads: 0,
-    kgAsFedPerHeadPerDay: 2,
+    weight: animal.weight,
+    intake: animal.intake,
+    kgRation: 2,
     dmPercent: 90,
     substitutionRate: 0.3,
     monthStart: 6,
@@ -637,7 +308,6 @@ export default function App() {
       name: "Mi establecimiento",
       region: "Sierras del Este",
       climate: "Normal",
-      supplement: defaultSupplement(),
     }
   );
 
@@ -672,12 +342,14 @@ export default function App() {
     ]
   );
 
+  const [supplements, setSupplements] = useState(autosave?.supplements || []);
+
   useEffect(() => {
     localStorage.setItem(
       "bf_autosave",
-      JSON.stringify({ farm, paddocks, herd })
+      JSON.stringify({ farm, paddocks, herd, supplements })
     );
-  }, [farm, paddocks, herd]);
+  }, [farm, paddocks, herd, supplements]);
 
   const persistFarms = (list) => {
     setSavedFarms(list);
@@ -690,22 +362,22 @@ export default function App() {
       farm,
       paddocks,
       herd,
+      supplements,
     };
     persistFarms([...savedFarms, farmData]);
   };
 
   const loadFarm = (f) => {
-    setFarm({
-      ...f.farm,
-      supplement: f.farm.supplement || defaultSupplement(),
-    });
+    setFarm(f.farm);
     setPaddocks(f.paddocks);
     setHerd(f.herd);
+    setSupplements(f.supplements || []);
   };
 
   const duplicateScenario = () => {
     setPaddocks(JSON.parse(JSON.stringify(paddocks)));
     setHerd(JSON.parse(JSON.stringify(herd)));
+    setSupplements(JSON.parse(JSON.stringify(supplements)));
   };
 
   const exportCSV = () => {
@@ -713,12 +385,24 @@ export default function App() {
       m.label,
       Math.round(results.offerByMonth[i]),
       Math.round(results.demandByMonth[i]),
-      Math.round(results.supplementEffectiveByMonth[i]),
-      Math.round(results.adjustedBalanceByMonth[i]),
+      Math.round(results.pastureReductionByMonth[i]),
+      Math.round(results.adjustedDemandByMonth[i]),
+      Math.round(results.supplementDmByMonth[i]),
+      Math.round(results.balanceByMonth[i]),
+      Math.round(results.realBalanceByMonth[i]),
     ]);
 
     const csv = [
-      ["Mes", "Oferta", "Demanda", "Aporte suplemento", "Balance ajustado"],
+      [
+        "Mes",
+        "Oferta pasto",
+        "Demanda original",
+        "Reduccion pasto por sustitucion",
+        "Demanda ajustada",
+        "Suplemento MS",
+        "Balance original",
+        "Balance real",
+      ],
       ...rows,
     ]
       .map((e) => e.join(","))
@@ -728,7 +412,7 @@ export default function App() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "balance_forrajero_ajustado.csv";
+    a.download = "balance_forrajero_suplementacion.csv";
     a.click();
   };
 
@@ -873,21 +557,37 @@ export default function App() {
     setHerd((prev) => prev.filter((h) => h.id !== id));
   };
 
-  const updateSupplement = (key, value) => {
-    setFarm((prev) => ({
-      ...prev,
-      supplement: {
-        ...(prev.supplement || defaultSupplement()),
-        [key]: value,
-      },
-    }));
+  const addSupplementRow = () => {
+    setSupplements((prev) => [...prev, defaultSupplementRow()]);
+  };
+
+  const updateSupplementRow = (id, key, value) => {
+    setSupplements((prev) =>
+      prev.map((s) => {
+        if (s.id !== id) return s;
+
+        const updated = { ...s, [key]: value };
+
+        if (key === "category") {
+          const found = ANIMAL_CATEGORIES.find((a) => a.label === value);
+          if (found) {
+            updated.weight = found.weight;
+            updated.intake = found.intake;
+          }
+        }
+
+        return updated;
+      })
+    );
+  };
+
+  const removeSupplementRow = (id) => {
+    setSupplements((prev) => prev.filter((s) => s.id !== id));
   };
 
   const results = useMemo(() => {
     const climateFactor =
       CLIMATE_SCENARIOS.find((c) => c.label === farm.climate)?.factor ?? 1;
-
-    const supplement = farm.supplement || defaultSupplement();
 
     const offerByMonth = MONTHS.map((m) => {
       return paddocks.reduce((sum, p) => {
@@ -972,47 +672,56 @@ export default function App() {
       }, 0);
     });
 
-    const supplementAsFedByMonth = MONTHS.map((m) => {
-      if (!supplement.enabled) return 0;
-      if (!monthIsActive(m.index, supplement.monthStart, supplement.monthEnd)) {
-        return 0;
-      }
-      return (
-        n(supplement.heads) *
-        n(supplement.kgAsFedPerHeadPerDay) *
-        m.days
-      );
+    const supplementDmByMonth = MONTHS.map((m) => {
+      return supplements.reduce((sum, s) => {
+        if (!monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
+
+        const dailyDm =
+          n(s.heads) *
+          n(s.kgRation) *
+          (n(s.dmPercent) / 100);
+
+        return sum + dailyDm * m.days;
+      }, 0);
     });
 
-    const supplementDmByMonth = MONTHS.map((m, i) => {
-      if (!supplement.enabled) return 0;
-      return supplementAsFedByMonth[i] * (n(supplement.dmPercent) / 100);
+    const pastureReductionByMonth = MONTHS.map((m) => {
+      return supplements.reduce((sum, s) => {
+        if (!monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
+
+        const dailyDm =
+          n(s.heads) *
+          n(s.kgRation) *
+          (n(s.dmPercent) / 100);
+
+        return sum + dailyDm * m.days * n(s.substitutionRate);
+      }, 0);
     });
 
-    const supplementEffectiveByMonth = MONTHS.map((m, i) => {
-      if (!supplement.enabled) return 0;
-      return supplementDmByMonth[i] * (1 - n(supplement.substitutionRate));
-    });
+    const adjustedDemandByMonth = MONTHS.map((_, i) =>
+      Math.max(0, demandByMonth[i] - pastureReductionByMonth[i])
+    );
+
+    const supplementNetByMonth = MONTHS.map((_, i) =>
+      Math.max(0, supplementDmByMonth[i] - pastureReductionByMonth[i])
+    );
 
     const balanceByMonth = MONTHS.map(
       (_, i) => offerByMonth[i] - demandByMonth[i]
     );
 
-    const adjustedBalanceByMonth = MONTHS.map(
-      (_, i) => balanceByMonth[i] + supplementEffectiveByMonth[i]
+    const realBalanceByMonth = MONTHS.map(
+      (_, i) => offerByMonth[i] - adjustedDemandByMonth[i]
     );
 
     const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
-    const annualSupplementEffective = supplementEffectiveByMonth.reduce(
-      (a, b) => a + b,
-      0
-    );
+    const annualAdjustedDemand = adjustedDemandByMonth.reduce((a, b) => a + b, 0);
+    const annualSupplementDm = supplementDmByMonth.reduce((a, b) => a + b, 0);
+    const annualPastureReduction = pastureReductionByMonth.reduce((a, b) => a + b, 0);
+    const annualSupplementNet = supplementNetByMonth.reduce((a, b) => a + b, 0);
     const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
-    const annualAdjustedBalance = adjustedBalanceByMonth.reduce(
-      (a, b) => a + b,
-      0
-    );
+    const annualRealBalance = realBalanceByMonth.reduce((a, b) => a + b, 0);
     const totalPV = herd.reduce((sum, h) => sum + n(h.heads) * n(h.weight), 0);
     const totalArea = paddocks.reduce((sum, p) => sum + n(p.hectares), 0);
     const currentLoad = totalArea > 0 ? totalPV / totalArea : 0;
@@ -1021,76 +730,81 @@ export default function App() {
       mes: m.label,
       oferta: Math.round(offerByMonth[i]),
       demanda: Math.round(demandByMonth[i]),
+      demandaAjustada: Math.round(adjustedDemandByMonth[i]),
       balance: Math.round(balanceByMonth[i]),
-      balanceAjustado: Math.round(adjustedBalanceByMonth[i]),
+      balanceReal: Math.round(realBalanceByMonth[i]),
     }));
 
     const monthlyDeficits = MONTHS.filter((_, i) => balanceByMonth[i] < 0).map(
       (m) => m.label
     );
 
-    const monthlyDeficitsAdjusted = MONTHS.filter(
-      (_, i) => adjustedBalanceByMonth[i] < 0
+    const monthlyDeficitsReal = MONTHS.filter(
+      (_, i) => realBalanceByMonth[i] < 0
     ).map((m) => m.label);
 
     const alerts = [];
+
     if (annualBalance < 0) {
-      alerts.push({
-        level: "high",
-        text: "Balance anual negativo sin suplementación.",
-      });
+      alerts.push({ level: "high", text: "Balance anual negativo sin suplementación." });
     }
-    if (annualAdjustedBalance < 0) {
-      alerts.push({
-        level: "high",
-        text: "Balance anual sigue negativo aun con suplementación.",
-      });
+
+    if (annualRealBalance < 0) {
+      alerts.push({ level: "high", text: "Balance real anual sigue negativo con la suplementación cargada." });
     }
+
     if (monthlyDeficits.length > 0) {
       alerts.push({
         level: "medium",
         text: `Déficit mensual sin suplementación en: ${monthlyDeficits.join(", ")}.`,
       });
     }
-    if (supplement.enabled && monthlyDeficitsAdjusted.length > 0) {
+
+    if (monthlyDeficitsReal.length > 0) {
       alerts.push({
         level: "medium",
-        text: `Déficit mensual aún con suplementación en: ${monthlyDeficitsAdjusted.join(", ")}.`,
+        text: `Déficit mensual real aún con suplementación en: ${monthlyDeficitsReal.join(", ")}.`,
       });
     }
+
     if (currentLoad > 850) {
       alerts.push({
         level: "medium",
-        text: "Carga alta para un planteo pastoril. Revisar oferta o suplementación.",
+        text: "Carga alta para un planteo pastoril. Revisar oferta, suplementación o carga animal.",
       });
     }
-    if (supplement.enabled && annualAdjustedBalance > 0 && annualBalance < 0) {
+
+    if (supplements.length > 0 && annualRealBalance > 0 && annualBalance < 0) {
       alerts.push({
         level: "low",
-        text: "La suplementación corrige el déficit anual del sistema.",
+        text: "La suplementación cargada corrige el déficit anual del sistema.",
       });
     }
 
     return {
       offerByMonth,
       demandByMonth,
-      supplementAsFedByMonth,
+      adjustedDemandByMonth,
       supplementDmByMonth,
-      supplementEffectiveByMonth,
+      pastureReductionByMonth,
+      supplementNetByMonth,
       balanceByMonth,
-      adjustedBalanceByMonth,
+      realBalanceByMonth,
       annualOffer,
       annualDemand,
-      annualSupplementEffective,
+      annualAdjustedDemand,
+      annualSupplementDm,
+      annualPastureReduction,
+      annualSupplementNet,
       annualBalance,
-      annualAdjustedBalance,
+      annualRealBalance,
       totalPV,
       totalArea,
       currentLoad,
       chartData,
       alerts,
     };
-  }, [farm, paddocks, herd]);
+  }, [farm, paddocks, herd, supplements]);
 
   return (
     <div style={pageStyle}>
@@ -1101,20 +815,14 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 13: alertas automáticas y suplementación con ración.
+              Versión 14: suplementación por múltiples categorías y balance real.
             </p>
           </div>
 
           <div style={actionsRowStyle}>
-            <button onClick={saveFarm} style={buttonStyle}>
-              Guardar
-            </button>
-            <button onClick={duplicateScenario} style={buttonStyle}>
-              Duplicar escenario
-            </button>
-            <button onClick={exportCSV} style={buttonStyle}>
-              Exportar CSV
-            </button>
+            <button onClick={saveFarm} style={buttonStyle}>Guardar</button>
+            <button onClick={duplicateScenario} style={buttonStyle}>Duplicar escenario</button>
+            <button onClick={exportCSV} style={buttonStyle}>Exportar CSV</button>
           </div>
         </div>
 
@@ -1127,11 +835,7 @@ export default function App() {
               </div>
             ) : (
               savedFarms.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => loadFarm(f)}
-                  style={secondaryButtonStyle}
-                >
+                <button key={f.id} onClick={() => loadFarm(f)} style={secondaryButtonStyle}>
                   {f.farm.name}
                 </button>
               ))
@@ -1147,9 +851,7 @@ export default function App() {
                 <label style={labelStyle}>Nombre</label>
                 <input
                   value={farm.name}
-                  onChange={(e) =>
-                    setFarm((prev) => ({ ...prev, name: e.target.value }))
-                  }
+                  onChange={(e) => setFarm((prev) => ({ ...prev, name: e.target.value }))}
                   style={inputStyle}
                 />
               </div>
@@ -1164,17 +866,13 @@ export default function App() {
                     setFarm((prev) => ({ ...prev, region }));
                     setPaddocks((prev) =>
                       prev.map((p) =>
-                        p.resourceType === "Campo natural"
-                          ? { ...p, environment: firstEnv }
-                          : p
+                        p.resourceType === "Campo natural" ? { ...p, environment: firstEnv } : p
                       )
                     );
                   }}
                   style={inputStyle}
                 >
-                  {REGIONS.map((r) => (
-                    <option key={r}>{r}</option>
-                  ))}
+                  {REGIONS.map((r) => (<option key={r}>{r}</option>))}
                 </select>
               </div>
 
@@ -1182,14 +880,10 @@ export default function App() {
                 <label style={labelStyle}>Año climático</label>
                 <select
                   value={farm.climate}
-                  onChange={(e) =>
-                    setFarm((prev) => ({ ...prev, climate: e.target.value }))
-                  }
+                  onChange={(e) => setFarm((prev) => ({ ...prev, climate: e.target.value }))}
                   style={inputStyle}
                 >
-                  {CLIMATE_SCENARIOS.map((c) => (
-                    <option key={c.label}>{c.label}</option>
-                  ))}
+                  {CLIMATE_SCENARIOS.map((c) => (<option key={c.label}>{c.label}</option>))}
                 </select>
               </div>
             </div>
@@ -1198,152 +892,20 @@ export default function App() {
           <div style={panelStyle}>
             <h2 style={panelTitleStyle}>Resumen</h2>
             <div style={summaryGridStyle}>
-              <SummaryCard
-                title="Carga actual"
-                value={`${formatNumber(results.currentLoad, 1)} kg PV/ha`}
-              />
-              <SummaryCard
-                title="Oferta anual"
-                value={`${formatNumber(results.annualOffer)} kg MS`}
-              />
-              <SummaryCard
-                title="Demanda anual"
-                value={`${formatNumber(results.annualDemand)} kg MS`}
-              />
-              <SummaryCard
-                title="Balance anual"
-                value={`${formatNumber(results.annualBalance)} kg MS`}
-              />
-              <SummaryCard
-                title="Aporte suplemento"
-                value={`${formatNumber(results.annualSupplementEffective)} kg MS`}
-              />
-              <SummaryCard
-                title="Balance ajustado"
-                value={`${formatNumber(results.annualAdjustedBalance)} kg MS`}
-              />
+              <SummaryCard title="Carga actual" value={`${formatNumber(results.currentLoad, 1)} kg PV/ha`} />
+              <SummaryCard title="Oferta anual" value={`${formatNumber(results.annualOffer)} kg MS`} />
+              <SummaryCard title="Demanda original" value={`${formatNumber(results.annualDemand)} kg MS`} />
+              <SummaryCard title="Demanda ajustada" value={`${formatNumber(results.annualAdjustedDemand)} kg MS`} />
+              <SummaryCard title="Suplemento MS" value={`${formatNumber(results.annualSupplementDm)} kg MS`} />
+              <SummaryCard title="Balance real" value={`${formatNumber(results.annualRealBalance)} kg MS`} />
             </div>
           </div>
         </div>
 
         <div style={{ ...panelStyle, marginBottom: 24 }}>
           <div style={panelHeaderRowStyle}>
-            <h2 style={panelTitleStyle}>Suplementación</h2>
+            <h2 style={panelTitleStyle}>Alertas automáticas</h2>
           </div>
-
-          <div style={supplementGridStyle}>
-            <div>
-              <label style={smallLabelStyle}>Usar suplementación</label>
-              <select
-                value={farm.supplement?.enabled ? "Sí" : "No"}
-                onChange={(e) =>
-                  updateSupplement("enabled", e.target.value === "Sí")
-                }
-                style={inputStyle}
-              >
-                <option>No</option>
-                <option>Sí</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={smallLabelStyle}>Categoría</label>
-              <select
-                value={farm.supplement?.category || "Vaca cría"}
-                onChange={(e) => updateSupplement("category", e.target.value)}
-                style={inputStyle}
-              >
-                {ANIMAL_CATEGORIES.map((a) => (
-                  <option key={a.label}>{a.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={smallLabelStyle}>Cabezas suplementadas</label>
-              <input
-                type="number"
-                value={farm.supplement?.heads ?? 0}
-                onChange={(e) => updateSupplement("heads", e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={smallLabelStyle}>Kg ración/animal/día</label>
-              <input
-                type="number"
-                step="0.1"
-                value={farm.supplement?.kgAsFedPerHeadPerDay ?? 2}
-                onChange={(e) =>
-                  updateSupplement("kgAsFedPerHeadPerDay", e.target.value)
-                }
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={smallLabelStyle}>% MS</label>
-              <input
-                type="number"
-                step="1"
-                value={farm.supplement?.dmPercent ?? 90}
-                onChange={(e) => updateSupplement("dmPercent", e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={smallLabelStyle}>Tasa sustitución</label>
-              <input
-                type="number"
-                step="0.01"
-                value={farm.supplement?.substitutionRate ?? 0.3}
-                onChange={(e) =>
-                  updateSupplement("substitutionRate", e.target.value)
-                }
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={smallLabelStyle}>Mes inicio</label>
-              <select
-                value={farm.supplement?.monthStart ?? 6}
-                onChange={(e) =>
-                  updateSupplement("monthStart", Number(e.target.value))
-                }
-                style={inputStyle}
-              >
-                {MONTH_OPTIONS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={smallLabelStyle}>Mes fin</label>
-              <select
-                value={farm.supplement?.monthEnd ?? 8}
-                onChange={(e) =>
-                  updateSupplement("monthEnd", Number(e.target.value))
-                }
-                style={inputStyle}
-              >
-                {MONTH_OPTIONS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ ...panelStyle, marginBottom: 24 }}>
-          <h2 style={panelTitleStyle}>Alertas automáticas</h2>
           {results.alerts.length === 0 ? (
             <div style={{ color: "#166534", fontWeight: 600 }}>
               No se detectan alertas importantes con la configuración actual.
@@ -1355,24 +917,9 @@ export default function App() {
                   key={idx}
                   style={{
                     ...alertBoxStyle,
-                    background:
-                      alert.level === "high"
-                        ? "#fee2e2"
-                        : alert.level === "medium"
-                        ? "#fef3c7"
-                        : "#dcfce7",
-                    borderColor:
-                      alert.level === "high"
-                        ? "#fecaca"
-                        : alert.level === "medium"
-                        ? "#fde68a"
-                        : "#86efac",
-                    color:
-                      alert.level === "high"
-                        ? "#991b1b"
-                        : alert.level === "medium"
-                        ? "#92400e"
-                        : "#166534",
+                    background: alert.level === "high" ? "#fee2e2" : alert.level === "medium" ? "#fef3c7" : "#dcfce7",
+                    borderColor: alert.level === "high" ? "#fecaca" : alert.level === "medium" ? "#fde68a" : "#86efac",
+                    color: alert.level === "high" ? "#991b1b" : alert.level === "medium" ? "#92400e" : "#166534",
                   }}
                 >
                   {alert.text}
@@ -1386,93 +933,50 @@ export default function App() {
           <div style={panelStyle}>
             <div style={panelHeaderRowStyle}>
               <h2 style={panelTitleStyle}>Potreros</h2>
-              <button onClick={addPaddock} style={buttonStyle}>
-                + Agregar
-              </button>
+              <button onClick={addPaddock} style={buttonStyle}>+ Agregar</button>
             </div>
 
             <div style={{ display: "grid", gap: 12 }}>
               {paddocks.map((p) => {
                 const firstGrazingDate = getFirstGrazingDate(p);
-                const firstGrazingText = firstGrazingDate
-                  ? firstGrazingDate.toLocaleDateString("es-UY")
-                  : "No aplica";
+                const firstGrazingText = firstGrazingDate ? firstGrazingDate.toLocaleDateString("es-UY") : "No aplica";
 
                 const second = p.secondCrop || defaultSecondCrop();
                 const secondFirstDate = getFirstGrazingDate(second);
-                const secondFirstText = secondFirstDate
-                  ? secondFirstDate.toLocaleDateString("es-UY")
-                  : "No aplica";
+                const secondFirstText = secondFirstDate ? secondFirstDate.toLocaleDateString("es-UY") : "No aplica";
 
                 return (
                   <div key={p.id} style={paddockCardStyle}>
                     <div style={paddockRow1Style}>
                       <div>
                         <label style={smallLabelStyle}>Nombre</label>
-                        <input
-                          value={p.name}
-                          onChange={(e) =>
-                            updatePaddock(p.id, "name", e.target.value)
-                          }
-                          style={inputStyle}
-                        />
+                        <input value={p.name} onChange={(e) => updatePaddock(p.id, "name", e.target.value)} style={inputStyle} />
                       </div>
 
                       <div>
                         <label style={smallLabelStyle}>Hectáreas</label>
-                        <input
-                          type="number"
-                          value={p.hectares}
-                          onChange={(e) =>
-                            updatePaddock(p.id, "hectares", e.target.value)
-                          }
-                          style={inputStyle}
-                        />
+                        <input type="number" value={p.hectares} onChange={(e) => updatePaddock(p.id, "hectares", e.target.value)} style={inputStyle} />
                       </div>
 
                       <div>
                         <label style={smallLabelStyle}>Recurso 1</label>
-                        <select
-                          value={p.resourceType}
-                          onChange={(e) =>
-                            updatePaddock(p.id, "resourceType", e.target.value)
-                          }
-                          style={inputStyle}
-                        >
-                          {RESOURCE_TYPES.map((r) => (
-                            <option key={r}>{r}</option>
-                          ))}
+                        <select value={p.resourceType} onChange={(e) => updatePaddock(p.id, "resourceType", e.target.value)} style={inputStyle}>
+                          {RESOURCE_TYPES.map((r) => (<option key={r}>{r}</option>))}
                         </select>
                       </div>
 
                       {p.resourceType === "Campo natural" ? (
                         <div>
                           <label style={smallLabelStyle}>Ambiente</label>
-                          <select
-                            value={p.environment}
-                            onChange={(e) =>
-                              updatePaddock(p.id, "environment", e.target.value)
-                            }
-                            style={inputStyle}
-                          >
-                            {environmentOptions.map((env) => (
-                              <option key={env}>{env}</option>
-                            ))}
+                          <select value={p.environment} onChange={(e) => updatePaddock(p.id, "environment", e.target.value)} style={inputStyle}>
+                            {environmentOptions.map((env) => (<option key={env}>{env}</option>))}
                           </select>
                         </div>
                       ) : (
                         <div>
                           <label style={smallLabelStyle}>Subtipo 1</label>
-                          <select
-                            value={p.subtype}
-                            onChange={(e) =>
-                              updatePaddock(p.id, "subtype", e.target.value)
-                            }
-                            style={inputStyle}
-                          >
-                            {getSubtypeOptions(p.resourceType).map((s) => (
-                              <option key={s.name}>{s.name}</option>
-                            ))}
+                          <select value={p.subtype} onChange={(e) => updatePaddock(p.id, "subtype", e.target.value)} style={inputStyle}>
+                            {getSubtypeOptions(p.resourceType).map((s) => (<option key={s.name}>{s.name}</option>))}
                           </select>
                         </div>
                       )}
@@ -1481,139 +985,56 @@ export default function App() {
                     <div style={paddockRow2Style}>
                       {p.resourceType === "Campo natural" ? (
                         <>
-                          <div>
-                            <label style={smallLabelStyle}>Fecha siembra</label>
-                            <input
-                              value="No aplica"
-                              disabled
-                              style={{ ...inputStyle, background: "#f1f5f9" }}
-                            />
-                          </div>
-                          <div>
-                            <label style={smallLabelStyle}>1er pastoreo</label>
-                            <input
-                              value="No aplica"
-                              disabled
-                              style={{ ...inputStyle, background: "#f1f5f9" }}
-                            />
-                          </div>
-                          <div>
-                            <label style={smallLabelStyle}>Días a pastoreo</label>
-                            <input
-                              value="No aplica"
-                              disabled
-                              style={{ ...inputStyle, background: "#f1f5f9" }}
-                            />
-                          </div>
+                          <div><label style={smallLabelStyle}>Fecha siembra</label><input value="No aplica" disabled style={{ ...inputStyle, background: "#f1f5f9" }} /></div>
+                          <div><label style={smallLabelStyle}>1er pastoreo</label><input value="No aplica" disabled style={{ ...inputStyle, background: "#f1f5f9" }} /></div>
+                          <div><label style={smallLabelStyle}>Días a pastoreo</label><input value="No aplica" disabled style={{ ...inputStyle, background: "#f1f5f9" }} /></div>
                         </>
                       ) : (
                         <>
                           <div>
                             <label style={smallLabelStyle}>Fecha siembra</label>
-                            <input
-                              type="date"
-                              value={p.sowingDate}
-                              onChange={(e) =>
-                                updatePaddock(p.id, "sowingDate", e.target.value)
-                              }
-                              style={inputStyle}
-                            />
+                            <input type="date" value={p.sowingDate} onChange={(e) => updatePaddock(p.id, "sowingDate", e.target.value)} style={inputStyle} />
                           </div>
                           <div>
                             <label style={smallLabelStyle}>1er pastoreo</label>
-                            <input
-                              value={firstGrazingText}
-                              disabled
-                              style={{ ...inputStyle, background: "#f1f5f9" }}
-                            />
+                            <input value={firstGrazingText} disabled style={{ ...inputStyle, background: "#f1f5f9" }} />
                           </div>
                           <div>
                             <label style={smallLabelStyle}>Días a pastoreo</label>
-                            <input
-                              type="number"
-                              value={p.firstGrazingDays}
-                              onChange={(e) =>
-                                updatePaddock(
-                                  p.id,
-                                  "firstGrazingDays",
-                                  e.target.value
-                                )
-                              }
-                              style={inputStyle}
-                            />
+                            <input type="number" value={p.firstGrazingDays} onChange={(e) => updatePaddock(p.id, "firstGrazingDays", e.target.value)} style={inputStyle} />
                           </div>
                         </>
                       )}
 
                       <div>
                         <label style={smallLabelStyle}>Mes fin</label>
-                        <select
-                          value={p.endMonth}
-                          onChange={(e) =>
-                            updatePaddock(p.id, "endMonth", Number(e.target.value))
-                          }
-                          style={inputStyle}
-                        >
-                          {MONTH_OPTIONS.map((m) => (
-                            <option key={m.value} value={m.value}>
-                              {m.label}
-                            </option>
-                          ))}
+                        <select value={p.endMonth} onChange={(e) => updatePaddock(p.id, "endMonth", Number(e.target.value))} style={inputStyle}>
+                          {MONTH_OPTIONS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
                         </select>
                       </div>
 
                       <div>
                         <label style={smallLabelStyle}>Manejo</label>
-                        <select
-                          value={p.management}
-                          onChange={(e) =>
-                            updatePaddock(p.id, "management", e.target.value)
-                          }
-                          style={inputStyle}
-                        >
-                          {MANAGEMENT_LEVELS.map((lvl) => (
-                            <option key={lvl.label}>{lvl.label}</option>
-                          ))}
+                        <select value={p.management} onChange={(e) => updatePaddock(p.id, "management", e.target.value)} style={inputStyle}>
+                          {MANAGEMENT_LEVELS.map((lvl) => (<option key={lvl.label}>{lvl.label}</option>))}
                         </select>
                       </div>
 
                       <div>
                         <label style={smallLabelStyle}>Eficiencia %</label>
-                        <input
-                          type="number"
-                          value={p.efficiency}
-                          onChange={(e) =>
-                            updatePaddock(p.id, "efficiency", e.target.value)
-                          }
-                          style={inputStyle}
-                        />
+                        <input type="number" value={p.efficiency} onChange={(e) => updatePaddock(p.id, "efficiency", e.target.value)} style={inputStyle} />
                       </div>
 
                       <div>
                         <label style={smallLabelStyle}>Segundo cultivo</label>
-                        <select
-                          value={second.enabled ? "Sí" : "No"}
-                          onChange={(e) =>
-                            updateSecondCrop(
-                              p.id,
-                              "enabled",
-                              e.target.value === "Sí"
-                            )
-                          }
-                          style={inputStyle}
-                        >
+                        <select value={second.enabled ? "Sí" : "No"} onChange={(e) => updateSecondCrop(p.id, "enabled", e.target.value === "Sí")} style={inputStyle}>
                           <option>No</option>
                           <option>Sí</option>
                         </select>
                       </div>
 
                       <div style={{ display: "flex", alignItems: "end" }}>
-                        <button
-                          onClick={() => removePaddock(p.id)}
-                          style={dangerButtonStyle}
-                        >
-                          Eliminar
-                        </button>
+                        <button onClick={() => removePaddock(p.id)} style={dangerButtonStyle}>Eliminar</button>
                       </div>
                     </div>
 
@@ -1624,135 +1045,52 @@ export default function App() {
                         <div style={paddockRow1Style}>
                           <div>
                             <label style={smallLabelStyle}>Recurso 2</label>
-                            <select
-                              value={second.resourceType}
-                              onChange={(e) =>
-                                updateSecondCrop(
-                                  p.id,
-                                  "resourceType",
-                                  e.target.value
-                                )
-                              }
-                              style={inputStyle}
-                            >
-                              {SECOND_CROP_TYPES.map((r) => (
-                                <option key={r}>{r}</option>
-                              ))}
+                            <select value={second.resourceType} onChange={(e) => updateSecondCrop(p.id, "resourceType", e.target.value)} style={inputStyle}>
+                              {SECOND_CROP_TYPES.map((r) => (<option key={r}>{r}</option>))}
                             </select>
                           </div>
 
                           <div>
                             <label style={smallLabelStyle}>Subtipo 2</label>
-                            <select
-                              value={second.subtype}
-                              onChange={(e) =>
-                                updateSecondCrop(p.id, "subtype", e.target.value)
-                              }
-                              style={inputStyle}
-                            >
-                              {getSubtypeOptions(second.resourceType).map((s) => (
-                                <option key={s.name}>{s.name}</option>
-                              ))}
+                            <select value={second.subtype} onChange={(e) => updateSecondCrop(p.id, "subtype", e.target.value)} style={inputStyle}>
+                              {getSubtypeOptions(second.resourceType).map((s) => (<option key={s.name}>{s.name}</option>))}
                             </select>
                           </div>
 
                           <div>
                             <label style={smallLabelStyle}>Fecha siembra</label>
-                            <input
-                              type="date"
-                              value={second.sowingDate}
-                              onChange={(e) =>
-                                updateSecondCrop(
-                                  p.id,
-                                  "sowingDate",
-                                  e.target.value
-                                )
-                              }
-                              style={inputStyle}
-                            />
+                            <input type="date" value={second.sowingDate} onChange={(e) => updateSecondCrop(p.id, "sowingDate", e.target.value)} style={inputStyle} />
                           </div>
 
                           <div>
                             <label style={smallLabelStyle}>1er pastoreo</label>
-                            <input
-                              value={secondFirstText}
-                              disabled
-                              style={{ ...inputStyle, background: "#f1f5f9" }}
-                            />
+                            <input value={secondFirstText} disabled style={{ ...inputStyle, background: "#f1f5f9" }} />
                           </div>
                         </div>
 
                         <div style={paddockRow2Style}>
                           <div>
                             <label style={smallLabelStyle}>Días a pastoreo</label>
-                            <input
-                              type="number"
-                              value={second.firstGrazingDays}
-                              onChange={(e) =>
-                                updateSecondCrop(
-                                  p.id,
-                                  "firstGrazingDays",
-                                  e.target.value
-                                )
-                              }
-                              style={inputStyle}
-                            />
+                            <input type="number" value={second.firstGrazingDays} onChange={(e) => updateSecondCrop(p.id, "firstGrazingDays", e.target.value)} style={inputStyle} />
                           </div>
 
                           <div>
                             <label style={smallLabelStyle}>Mes fin</label>
-                            <select
-                              value={second.endMonth}
-                              onChange={(e) =>
-                                updateSecondCrop(
-                                  p.id,
-                                  "endMonth",
-                                  Number(e.target.value)
-                                )
-                              }
-                              style={inputStyle}
-                            >
-                              {MONTH_OPTIONS.map((m) => (
-                                <option key={m.value} value={m.value}>
-                                  {m.label}
-                                </option>
-                              ))}
+                            <select value={second.endMonth} onChange={(e) => updateSecondCrop(p.id, "endMonth", Number(e.target.value))} style={inputStyle}>
+                              {MONTH_OPTIONS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
                             </select>
                           </div>
 
                           <div>
                             <label style={smallLabelStyle}>Manejo</label>
-                            <select
-                              value={second.management}
-                              onChange={(e) =>
-                                updateSecondCrop(
-                                  p.id,
-                                  "management",
-                                  e.target.value
-                                )
-                              }
-                              style={inputStyle}
-                            >
-                              {MANAGEMENT_LEVELS.map((lvl) => (
-                                <option key={lvl.label}>{lvl.label}</option>
-                              ))}
+                            <select value={second.management} onChange={(e) => updateSecondCrop(p.id, "management", e.target.value)} style={inputStyle}>
+                              {MANAGEMENT_LEVELS.map((lvl) => (<option key={lvl.label}>{lvl.label}</option>))}
                             </select>
                           </div>
 
                           <div>
                             <label style={smallLabelStyle}>Eficiencia %</label>
-                            <input
-                              type="number"
-                              value={second.efficiency}
-                              onChange={(e) =>
-                                updateSecondCrop(
-                                  p.id,
-                                  "efficiency",
-                                  e.target.value
-                                )
-                              }
-                              style={inputStyle}
-                            />
+                            <input type="number" value={second.efficiency} onChange={(e) => updateSecondCrop(p.id, "efficiency", e.target.value)} style={inputStyle} />
                           </div>
                         </div>
                       </div>
@@ -1763,79 +1101,76 @@ export default function App() {
             </div>
           </div>
 
-          <div style={panelStyle}>
-            <div style={panelHeaderRowStyle}>
-              <h2 style={panelTitleStyle}>Rodeo</h2>
-              <button onClick={addHerdRow} style={buttonStyle}>
-                + Agregar
-              </button>
+          <div style={{ display: "grid", gap: 16 }}>
+            <div style={panelStyle}>
+              <div style={panelHeaderRowStyle}>
+                <h2 style={panelTitleStyle}>Rodeo</h2>
+                <button onClick={addHerdRow} style={buttonStyle}>+ Agregar</button>
+              </div>
+
+              <div style={{ display: "grid", gap: 12 }}>
+                {herd.map((h) => (
+                  <div key={h.id} style={boxStyle}>
+                    <div style={herdGridStyle}>
+                      <div>
+                        <label style={smallLabelStyle}>Categoría</label>
+                        <select value={h.category} onChange={(e) => updateHerd(h.id, "category", e.target.value)} style={inputStyle}>
+                          {ANIMAL_CATEGORIES.map((a) => (<option key={a.label}>{a.label}</option>))}
+                        </select>
+                      </div>
+                      <div><label style={smallLabelStyle}>Cabezas</label><input type="number" value={h.heads} onChange={(e) => updateHerd(h.id, "heads", e.target.value)} style={inputStyle} /></div>
+                      <div><label style={smallLabelStyle}>Peso</label><input type="number" value={h.weight} onChange={(e) => updateHerd(h.id, "weight", e.target.value)} style={inputStyle} /></div>
+                      <div><label style={smallLabelStyle}>Consumo % PV</label><input type="number" step="0.1" value={h.intake} onChange={(e) => updateHerd(h.id, "intake", e.target.value)} style={inputStyle} /></div>
+                      <button onClick={() => removeHerd(h.id)} style={dangerButtonStyle}>Eliminar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div style={{ display: "grid", gap: 12 }}>
-              {herd.map((h) => (
-                <div key={h.id} style={boxStyle}>
-                  <div style={herdGridStyle}>
-                    <div>
-                      <label style={smallLabelStyle}>Categoría</label>
-                      <select
-                        value={h.category}
-                        onChange={(e) =>
-                          updateHerd(h.id, "category", e.target.value)
-                        }
-                        style={inputStyle}
-                      >
-                        {ANIMAL_CATEGORIES.map((a) => (
-                          <option key={a.label}>{a.label}</option>
-                        ))}
-                      </select>
-                    </div>
+            <div style={panelStyle}>
+              <div style={panelHeaderRowStyle}>
+                <h2 style={panelTitleStyle}>Suplementación</h2>
+                <button onClick={addSupplementRow} style={buttonStyle}>+ Agregar</button>
+              </div>
 
-                    <div>
-                      <label style={smallLabelStyle}>Cabezas</label>
-                      <input
-                        type="number"
-                        value={h.heads}
-                        onChange={(e) =>
-                          updateHerd(h.id, "heads", e.target.value)
-                        }
-                        style={inputStyle}
-                      />
+              <div style={{ display: "grid", gap: 12 }}>
+                {supplements.length === 0 ? (
+                  <div style={{ color: "#64748b", fontSize: 14 }}>No hay suplementación cargada.</div>
+                ) : (
+                  supplements.map((s) => (
+                    <div key={s.id} style={boxStyle}>
+                      <div style={supplementRowStyle}>
+                        <div>
+                          <label style={smallLabelStyle}>Categoría</label>
+                          <select value={s.category} onChange={(e) => updateSupplementRow(s.id, "category", e.target.value)} style={inputStyle}>
+                            {ANIMAL_CATEGORIES.map((a) => (<option key={a.label}>{a.label}</option>))}
+                          </select>
+                        </div>
+                        <div><label style={smallLabelStyle}>Cabezas</label><input type="number" value={s.heads} onChange={(e) => updateSupplementRow(s.id, "heads", e.target.value)} style={inputStyle} /></div>
+                        <div><label style={smallLabelStyle}>Peso</label><input type="number" value={s.weight} onChange={(e) => updateSupplementRow(s.id, "weight", e.target.value)} style={inputStyle} /></div>
+                        <div><label style={smallLabelStyle}>Consumo % PV</label><input type="number" step="0.1" value={s.intake} onChange={(e) => updateSupplementRow(s.id, "intake", e.target.value)} style={inputStyle} /></div>
+                        <div><label style={smallLabelStyle}>Kg ración/día</label><input type="number" step="0.1" value={s.kgRation} onChange={(e) => updateSupplementRow(s.id, "kgRation", e.target.value)} style={inputStyle} /></div>
+                        <div><label style={smallLabelStyle}>% MS</label><input type="number" value={s.dmPercent} onChange={(e) => updateSupplementRow(s.id, "dmPercent", e.target.value)} style={inputStyle} /></div>
+                        <div><label style={smallLabelStyle}>Sustitución</label><input type="number" step="0.01" value={s.substitutionRate} onChange={(e) => updateSupplementRow(s.id, "substitutionRate", e.target.value)} style={inputStyle} /></div>
+                        <div>
+                          <label style={smallLabelStyle}>Mes inicio</label>
+                          <select value={s.monthStart} onChange={(e) => updateSupplementRow(s.id, "monthStart", Number(e.target.value))} style={inputStyle}>
+                            {MONTH_OPTIONS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={smallLabelStyle}>Mes fin</label>
+                          <select value={s.monthEnd} onChange={(e) => updateSupplementRow(s.id, "monthEnd", Number(e.target.value))} style={inputStyle}>
+                            {MONTH_OPTIONS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
+                          </select>
+                        </div>
+                        <button onClick={() => removeSupplementRow(s.id)} style={dangerButtonStyle}>Eliminar</button>
+                      </div>
                     </div>
-
-                    <div>
-                      <label style={smallLabelStyle}>Peso</label>
-                      <input
-                        type="number"
-                        value={h.weight}
-                        onChange={(e) =>
-                          updateHerd(h.id, "weight", e.target.value)
-                        }
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={smallLabelStyle}>Consumo %</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={h.intake}
-                        onChange={(e) =>
-                          updateHerd(h.id, "intake", e.target.value)
-                        }
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => removeHerd(h.id)}
-                      style={dangerButtonStyle}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1850,30 +1185,11 @@ export default function App() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="oferta"
-                  stroke="#16a34a"
-                  strokeWidth={3}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="demanda"
-                  stroke="#dc2626"
-                  strokeWidth={3}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="balance"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="balanceAjustado"
-                  stroke="#7c3aed"
-                  strokeWidth={3}
-                />
+                <Line type="monotone" dataKey="oferta" stroke="#16a34a" strokeWidth={3} />
+                <Line type="monotone" dataKey="demanda" stroke="#dc2626" strokeWidth={3} />
+                <Line type="monotone" dataKey="demandaAjustada" stroke="#ea580c" strokeWidth={3} />
+                <Line type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={3} />
+                <Line type="monotone" dataKey="balanceReal" stroke="#7c3aed" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1887,48 +1203,28 @@ export default function App() {
                 <tr style={{ background: "#e2e8f0" }}>
                   <th style={thStyle}>Mes</th>
                   <th style={thStyle}>Oferta</th>
-                  <th style={thStyle}>Demanda</th>
-                  <th style={thStyle}>Aporte suplemento</th>
+                  <th style={thStyle}>Demanda original</th>
+                  <th style={thStyle}>Reducción pasto</th>
+                  <th style={thStyle}>Demanda ajustada</th>
+                  <th style={thStyle}>Suplemento MS</th>
                   <th style={thStyle}>Balance</th>
-                  <th style={thStyle}>Balance ajustado</th>
+                  <th style={thStyle}>Balance real</th>
                 </tr>
               </thead>
               <tbody>
                 {MONTHS.map((m, i) => (
                   <tr key={m.key}>
                     <td style={tdStyle}>{m.label}</td>
-                    <td style={tdStyle}>
-                      {formatNumber(results.offerByMonth[i])}
-                    </td>
-                    <td style={tdStyle}>
-                      {formatNumber(results.demandByMonth[i])}
-                    </td>
-                    <td style={tdStyle}>
-                      {formatNumber(results.supplementEffectiveByMonth[i])}
-                    </td>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        color:
-                          results.balanceByMonth[i] < 0
-                            ? "#dc2626"
-                            : "#16a34a",
-                        fontWeight: 600,
-                      }}
-                    >
+                    <td style={tdStyle}>{formatNumber(results.offerByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.demandByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.pastureReductionByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.adjustedDemandByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.supplementDmByMonth[i])}</td>
+                    <td style={{ ...tdStyle, color: results.balanceByMonth[i] < 0 ? "#dc2626" : "#16a34a", fontWeight: 600 }}>
                       {formatNumber(results.balanceByMonth[i])}
                     </td>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        color:
-                          results.adjustedBalanceByMonth[i] < 0
-                            ? "#dc2626"
-                            : "#7c3aed",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatNumber(results.adjustedBalanceByMonth[i])}
+                    <td style={{ ...tdStyle, color: results.realBalanceByMonth[i] < 0 ? "#dc2626" : "#7c3aed", fontWeight: 700 }}>
+                      {formatNumber(results.realBalanceByMonth[i])}
                     </td>
                   </tr>
                 ))}
@@ -1950,7 +1246,7 @@ const pageStyle = {
 };
 
 const containerStyle = {
-  maxWidth: 1500,
+  maxWidth: 1550,
   margin: "0 auto",
   background: "#ffffff",
   borderRadius: 24,
@@ -1985,12 +1281,6 @@ const midGridStyle = {
   gridTemplateColumns: "1.2fr 0.8fr",
   gap: 16,
   marginBottom: 24,
-};
-
-const supplementGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(180px, 1fr))",
-  gap: 12,
 };
 
 const panelStyle = {
@@ -2080,6 +1370,14 @@ const paddockRow2Style = {
 const herdGridStyle = {
   display: "grid",
   gridTemplateColumns: "1fr 0.7fr 0.7fr 0.7fr auto",
+  gap: 8,
+  alignItems: "end",
+};
+
+const supplementRowStyle = {
+  display: "grid",
+  gridTemplateColumns:
+    "1fr 0.65fr 0.65fr 0.8fr 0.8fr 0.65fr 0.75fr 0.75fr 0.75fr auto",
   gap: 8,
   alignItems: "end",
 };
