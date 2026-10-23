@@ -279,8 +279,9 @@ function overlapDaysForSupplement(s, lot, monthIndex, exerciseYear) {
   if ((s.startDate && !start) || (s.endDate && !end)) return 0;
   if (start && end && end <= start) return 0;
   if (entry && exit && exit <= entry) return 0;
-  // Datos antiguos con meses, hasta que el usuario establezca fechas explícitas.
-  if (!start && !end && !monthIsActive(monthIndex, s.monthStart, s.monthEnd)) return 0;
+  // Exigir fechas explícitas: evita contabilizar accidentalmente
+  // raciones históricas con meses y años ambiguos.
+  if (!start || !end) return 0;
   const from = new Date(Math.max(monthStart.getTime(), entry?.getTime() ?? -Infinity, start?.getTime() ?? -Infinity));
   const to = new Date(Math.min(monthEnd.getTime(), exit?.getTime() ?? Infinity, end?.getTime() ?? Infinity));
   return Math.max(0, Math.round((to - from) / 86400000));
@@ -296,9 +297,15 @@ function rationKgPerHead(s, lot) {
   if (s.rationPvPercent == null) return Math.max(0, n(s.kgRation));
   return Math.max(0, lotAverageWeight(lot) * n(s.rationPvPercent) / 100 / dm);
 }
-function supplementStats(s, lot, exerciseYear) {
+function hasSupplementConflict(s, supplements) {
+  return supplements.some(other => other !== s &&
+    String(other.herdId) === String(s.herdId) &&
+    s.startDate && s.endDate && other.startDate && other.endDate &&
+    s.startDate < other.endDate && other.startDate < s.endDate);
+}
+function supplementStats(s, lot, exerciseYear, supplements = []) {
   if (!lot) return { days: 0, kgHead: 0, totalKg: 0, totalDm: 0, cost: 0 };
-  const days = MONTHS.reduce((sum, m) => sum + overlapDaysForSupplement(s, lot, m.index, exerciseYear), 0);
+  const days = hasSupplementConflict(s, supplements) ? 0 : MONTHS.reduce((sum, m) => sum + overlapDaysForSupplement(s, lot, m.index, exerciseYear), 0);
   const kgHead = rationKgPerHead(s, lot);
   const totalKg = days * n(lot.heads) * kgHead;
   return { days, kgHead, totalKg, totalDm: totalKg * n(s.dmPercent) / 100,
@@ -651,7 +658,14 @@ export default function App() {
   };
 
   const addSupplementRow = () => {
-    setSupplements((prev) => [...prev, defaultSupplementRow()]);
+    const row = defaultSupplementRow();
+    const lot = herd[0];
+    row.herdId = lot ? String(lot.id) : "";
+    // Cada período se define independientemente: no se aplica ración
+    // automáticamente durante toda la permanencia del lote.
+    row.startDate = "";
+    row.endDate = "";
+    setSupplements((prev) => [...prev, row]);
   };
 
   const updateSupplementRow = (id, key, value) => {
@@ -660,6 +674,7 @@ export default function App() {
         if (s.id !== id) return s;
 
         const updated = { ...s, [key]: value };
+        // Cambiar el lote no debe modificar el período estratégico elegido.
 
         if (key === "category") {
           const found = ANIMAL_CATEGORIES.find((a) => a.label === value);
@@ -771,6 +786,11 @@ export default function App() {
       const lot = herd.find(h => String(h.id) === String(s.herdId));
       if (!lot) return sum;
       const days = overlapDaysForSupplement(s, lot, m.index, exerciseYear);
+      const overlap = supplements.some(other =>
+        other !== s && String(other.herdId) === String(s.herdId) &&
+        other.startDate && other.endDate && s.startDate && s.endDate &&
+        other.startDate < s.endDate && s.startDate < other.endDate);
+      if (overlap) return sum; // períodos ambiguos: no sumar hasta corregirlos
       return sum + days * n(lot.heads) * rationKgPerHead(s, lot) * n(s.dmPercent) / 100;
     }, 0));
 
@@ -780,7 +800,11 @@ export default function App() {
     const pastureReductionByMonth = MONTHS.map((m) => herd.reduce((sum, lot) => {
       const lotDemand = activeHerdDays(lot, m.index, exerciseYear) * n(lot.heads) * lotAverageWeight(lot) * n(lot.intake) / 100;
       const reductions = supplements.filter(s => String(s.herdId) === String(lot.id)).reduce((subtotal, s) => {
-        const days = overlapDaysForSupplement(s, lot, m.index, exerciseYear);
+        const overlaps = supplements.some(other =>
+          other !== s && String(other.herdId) === String(s.herdId) &&
+          other.startDate && other.endDate && s.startDate && s.endDate &&
+          other.startDate < s.endDate && s.startDate < other.endDate);
+        const days = overlaps ? 0 : overlapDaysForSupplement(s, lot, m.index, exerciseYear);
         const dailyDm = n(lot.heads) * rationKgPerHead(s, lot) * n(s.dmPercent) / 100;
         if (s.feedingMode === "complete") return subtotal + days * n(lot.heads) * lotAverageWeight(lot) * n(lot.intake) / 100;
         return subtotal + days * dailyDm * Math.min(1, Math.max(0, n(s.substitutionRate)));
@@ -807,8 +831,8 @@ export default function App() {
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
     const annualAdjustedDemand = adjustedDemandByMonth.reduce((a, b) => a + b, 0);
     const annualSupplementDm = supplementDmByMonth.reduce((a, b) => a + b, 0);
-    const annualRationKg = supplements.reduce((sum, s) => sum + supplementStats(s, herd.find(h => String(h.id) === String(s.herdId)), exerciseYear).totalKg, 0);
-    const annualRationCost = supplements.reduce((sum, s) => sum + supplementStats(s, herd.find(h => String(h.id) === String(s.herdId)), exerciseYear).cost, 0);
+    const annualRationKg = supplements.reduce((sum, s) => sum + supplementStats(s, herd.find(h => String(h.id) === String(s.herdId)), exerciseYear, supplements).totalKg, 0);
+    const annualRationCost = supplements.reduce((sum, s) => sum + supplementStats(s, herd.find(h => String(h.id) === String(s.herdId)), exerciseYear, supplements).cost, 0);
     const annualPastureReduction = pastureReductionByMonth.reduce((a, b) => a + b, 0);
     const annualSupplementNet = supplementNetByMonth.reduce((a, b) => a + b, 0);
     const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
@@ -1242,8 +1266,8 @@ export default function App() {
 
             <div style={panelStyle}>
               <div style={panelHeaderRowStyle}>
-                <h2 style={panelTitleStyle}>Suplementación</h2>
-                <button onClick={addSupplementRow} style={buttonStyle}>+ Agregar</button>
+                <h2 style={panelTitleStyle}>Suplementación estratégica por períodos</h2>
+                <button onClick={addSupplementRow} style={buttonStyle}>+ Agregar período</button>
               </div>
 
               <div style={{ display: "grid", gap: 12 }}>
@@ -1252,7 +1276,7 @@ export default function App() {
                 ) : (
                   supplements.map((s) => {
                     const lot = herd.find(h => String(h.id) === String(s.herdId));
-                    const stats = supplementStats(s, lot, exerciseYear);
+                    const stats = supplementStats(s, lot, exerciseYear, supplements);
                     return (
                     <div key={s.id} style={boxStyle}>
                       <div style={supplementRowStyle}>
@@ -1273,9 +1297,9 @@ export default function App() {
                           <input type="number" min="1" max="100" value={s.dmPercent} onChange={e => updateSupplementRow(s.id,"dmPercent",e.target.value)} style={inputStyle}/></div>
                         {s.feedingMode !== "complete" && <div><label style={smallLabelStyle}>Sustitución (0 a 1 kg MS/kg MS)</label>
                           <input type="number" min="0" max="1" step="0.05" value={s.substitutionRate} onChange={e => updateSupplementRow(s.id,"substitutionRate",e.target.value)} style={inputStyle}/></div>}
-                        <div><label style={smallLabelStyle}>Inicio suplementación</label>
+                        <div><label style={smallLabelStyle}>Inicio del período</label>
                           <input type="date" value={s.startDate || ""} onChange={e => updateSupplementRow(s.id,"startDate",e.target.value)} style={inputStyle}/></div>
-                        <div><label style={smallLabelStyle}>Fin suplementación (exclusivo)</label>
+                        <div><label style={smallLabelStyle}>Fin del período (exclusivo)</label>
                           <input type="date" min={s.startDate || undefined} value={s.endDate || ""} onChange={e => updateSupplementRow(s.id,"endDate",e.target.value)} style={inputStyle}/></div>
                         <div><label style={smallLabelStyle}>Precio ración (USD/t tal cual)</label>
                           <input type="number" min="0" value={s.pricePerTon ?? 0} onChange={e => updateSupplementRow(s.id,"pricePerTon",e.target.value)} style={inputStyle}/></div>
@@ -1283,7 +1307,11 @@ export default function App() {
                       </div>
                       {!lot && <div style={{color:"#b91c1c",fontSize:13,marginTop:8}}>Seleccioná un lote para contabilizar la ración.</div>}
                       {s.startDate && s.endDate && s.endDate <= s.startDate && <div style={{color:"#b91c1c",fontSize:13}}>La fecha final debe ser posterior a la inicial.</div>}
-                      {(!s.startDate || !s.endDate) && <div style={{color:"#64748b",fontSize:12,marginTop:8}}>Completá ambas fechas para delimitar el período. Si se dejan vacías, los registros antiguos conservan sus meses originales.</div>}
+                      {lot && stats.days === 0 && <div style={{color:"#b91c1c",fontSize:13,marginTop:8}}>
+                        Este período no tiene días efectivos en el ejercicio {exerciseYear}–{exerciseYear+1} o fuera de la permanencia del lote. Revisá las fechas.
+                      </div>}
+                      {(!s.startDate || !s.endDate) && <div style={{color:"#b45309",fontSize:12,marginTop:8}}>Indicá inicio y fin de este período estratégico. Sin ambas fechas no se contabiliza ración.</div>}
+                      {lot && supplements.some(other => other.id !== s.id && String(other.herdId) === String(s.herdId) && s.startDate && s.endDate && other.startDate && other.endDate && s.startDate < other.endDate && other.startDate < s.endDate) && <div style={{color:"#b91c1c",fontSize:13,marginTop:8}}>Atención: hay períodos de ración superpuestos en este lote. Sus aportes se sumarían dos veces; corregí las fechas.</div>}
                       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginTop:12}}>
                         <SummaryCard title="Kg ración/cabeza/día (tal cual)" value={formatNumber(stats.kgHead,2)}/>
                         <SummaryCard title="Días efectivos del ejercicio" value={formatNumber(stats.days)}/>
