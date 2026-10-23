@@ -361,6 +361,107 @@ function defaultSupplementRow() {
   };
 }
 
+
+// Planificador independiente: los resultados son escenarios y no reemplazan
+// las mediciones de disponibilidad ni un modelo nutricional calibrado.
+function ProductionPlanner({ herd, paddocks, supplements }) {
+  const [lotId, setLotId] = useState(String(herd[0]?.id ?? ""));
+  const [fieldId, setFieldId] = useState(String(paddocks[0]?.id ?? ""));
+  const [mode, setMode] = useState("target");
+  const [gmd, setGmd] = useState(0.75);
+  const [period, setPeriod] = useState(90);
+  const [area, setArea] = useState(12);
+  const [parcelArea, setParcelArea] = useState(2);
+  const [entryMass, setEntryMass] = useState(2200);
+  const [residual, setResidual] = useState(1100);
+  const [utilization, setUtilization] = useState(75);
+  const [growth, setGrowth] = useState(35);
+  const [me, setMe] = useState(2.35);
+  const [protein, setProtein] = useState(15);
+  const [rationMe, setRationMe] = useState(2.65);
+  const [rationProtein, setRationProtein] = useState(16);
+  const [occupancy, setOccupancy] = useState(3);
+  const lot = herd.find(h => String(h.id) === lotId) || herd[0];
+  const field = paddocks.find(p => String(p.id) === fieldId) || paddocks[0];
+  const positive = x => Math.max(0, Number(x) || 0);
+  const heads = positive(lot?.heads);
+  const startWeight = positive(lot?.entryWeight ?? lot?.weight);
+  const intakePct = positive(lot?.intake || 2.8) / 100;
+  const d = Math.max(1, Math.round(positive(period)));
+  const grazingArea = positive(area);
+  const parcel = positive(parcelArea);
+  const usablePerHa = Math.max(0, positive(entryMass) - positive(residual)) * positive(utilization) / 100;
+  const validPeriods = supplements.filter(s => String(s.herdId) === String(lot?.id) && s.startDate && s.endDate && s.endDate > s.startDate);
+  const rationNote = validPeriods.length ? `Este lote tiene ${validPeriods.length} período(s) de ración en el balance general. Para el escenario nutricional, cargá la participación media de ración del período analizado.` : "No hay períodos de ración registrados para este lote.";
+  const [rationShare, setRationShare] = useState(0);
+  const share = Math.min(1, positive(rationShare) / 100);
+  const dietMe = positive(me) * (1-share) + positive(rationMe) * share;
+  const dietProtein = positive(protein) * (1-share) + positive(rationProtein) * share;
+  // Aproximación de exploración: EM disponible menos mantenimiento, dividido
+  // por energía marginal de ganancia. No es un modelo NASEM validado.
+  const estimateAt = w => {
+    const dm = w * intakePct;
+    const maintenance = 0.13 * Math.pow(Math.max(1,w), 0.75);
+    const energySurplus = dm * dietMe - maintenance;
+    return Math.max(0, Math.min(1.6, energySurplus / 8.5));
+  };
+  const estimatedGmd = estimateAt(startWeight);
+  const chosenGmd = mode === "estimated" ? estimatedGmd : positive(gmd);
+  const endWeight = startWeight + chosenGmd * d;
+  const avgWeight = (startWeight + endWeight) / 2;
+  const dailyDm = heads * avgWeight * intakePct;
+  const dailyPasture = dailyDm * (1-share);
+  const parcelDays = dailyPasture > 0 ? parcel * usablePerHa / dailyPasture : 0;
+  const rest = Math.max(0, (Math.floor(grazingArea / Math.max(0.01, parcel)) - 1) * positive(occupancy));
+  const regrowthDays = positive(growth) > 0 ? Math.max(0, (positive(entryMass)-positive(residual)) / positive(growth)) : Infinity;
+  const periodSupply = grazingArea * usablePerHa + grazingArea * positive(growth) * d * positive(utilization) / 100;
+  const periodNeed = dailyPasture * d;
+  const carryingHeads = heads > 0 && periodNeed > 0 ? Math.floor(heads * periodSupply / periodNeed) : 0;
+  const fmt = (v, dec=1) => Number.isFinite(v) ? v.toLocaleString("es-UY", {maximumFractionDigits:dec, minimumFractionDigits:dec}) : "—";
+  const cell = (label, value) => <div style={summaryCardStyle}><div style={{fontSize:12,color:"#64748b"}}>{label}</div><div style={{fontSize:22,fontWeight:700,color:"#0f172a",marginTop:5}}>{value}</div></div>;
+  const fieldArea = positive(field?.hectares);
+  return <div style={panelStyle}>
+    <h2 style={panelTitleStyle}>Producción animal y pastoreo rotativo · Simulador</h2>
+    <p style={{fontSize:13,color:"#475569"}}>Proyectá peso, carga y rotación. Los parámetros de calidad y disponibilidad deben medirse o estimarse por el técnico. Este módulo no altera todavía el balance mensual principal.</p>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}>
+      <div><label style={smallLabelStyle}>Lote</label><select style={inputStyle} value={lot?.id ?? ""} onChange={e=>setLotId(e.target.value)}>{herd.map((h,i)=><option key={h.id} value={h.id}>Lote {i+1} · {h.category} · {h.heads} cab.</option>)}</select></div>
+      <div><label style={smallLabelStyle}>Potrero de referencia</label><select style={inputStyle} value={field?.id ?? ""} onChange={e=>{setFieldId(e.target.value);const p=paddocks.find(x=>String(x.id)===e.target.value);if(p)setArea(p.hectares)}}>{paddocks.map(p=><option key={p.id} value={p.id}>{p.name} ({p.hectares} ha)</option>)}</select></div>
+      <div><label style={smallLabelStyle}>Modalidad</label><select style={inputStyle} value={mode} onChange={e=>setMode(e.target.value)}><option value="target">GMD objetivo</option><option value="estimated">GMD exploratoria por energía</option></select></div>
+      <div><label style={smallLabelStyle}>Duración del período (días)</label><input style={inputStyle} type="number" min="1" value={period} onChange={e=>setPeriod(e.target.value)}/></div>
+      {mode === "target" && <div><label style={smallLabelStyle}>GMD objetivo (kg/cab/día)</label><input style={inputStyle} type="number" min="0" step="0.05" value={gmd} onChange={e=>setGmd(e.target.value)}/></div>}
+      <div><label style={smallLabelStyle}>Superficie de rotación (ha)</label><input style={inputStyle} type="number" min="0" step="0.5" value={area} onChange={e=>setArea(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Superficie de parcela (ha)</label><input style={inputStyle} type="number" min="0" step="0.5" value={parcelArea} onChange={e=>setParcelArea(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Disponibilidad inicial (kg MS/ha)</label><input style={inputStyle} type="number" min="0" value={entryMass} onChange={e=>setEntryMass(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Remanente objetivo (kg MS/ha)</label><input style={inputStyle} type="number" min="0" value={residual} onChange={e=>setResidual(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Aprovechamiento sobre removible (%)</label><input style={inputStyle} type="number" min="0" max="100" value={utilization} onChange={e=>setUtilization(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Crecimiento estimado (kg MS/ha/día)</label><input style={inputStyle} type="number" min="0" value={growth} onChange={e=>setGrowth(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Ocupación deseada (días/parcela)</label><input style={inputStyle} type="number" min="0" value={occupancy} onChange={e=>setOccupancy(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Participación media ración (% de MS)</label><input style={inputStyle} type="number" min="0" max="100" value={rationShare} onChange={e=>setRationShare(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Energía pasto (Mcal EM/kg MS)</label><input style={inputStyle} type="number" min="0" step="0.05" value={me} onChange={e=>setMe(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>PB pasto (%)</label><input style={inputStyle} type="number" min="0" value={protein} onChange={e=>setProtein(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>Energía ración (Mcal EM/kg MS)</label><input style={inputStyle} type="number" min="0" step="0.05" value={rationMe} onChange={e=>setRationMe(e.target.value)}/></div>
+      <div><label style={smallLabelStyle}>PB ración (%)</label><input style={inputStyle} type="number" min="0" value={rationProtein} onChange={e=>setRationProtein(e.target.value)}/></div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12,marginTop:16}}>
+      {cell("GMD proyectada (kg/día)",fmt(chosenGmd,2))}
+      {cell("Peso final proyectado (kg/cab)",fmt(endWeight))}
+      {cell("Kg PV producidos por lote",fmt(heads * chosenGmd * d,0))}
+      {cell("Duración de parcela (días)",dailyPasture>0?fmt(parcelDays):"Sin pastoreo")}
+      {cell("Descanso disponible (días)",fmt(rest,0))}
+      {cell("Descanso por rebrote (días)",fmt(regrowthDays,0))}
+      {cell("Carga orientativa (cabezas)",fmt(carryingHeads,0))}
+      {cell("Saldo MS pastoril del período (kg)",fmt(periodSupply-periodNeed,0))}
+    </div>
+    <div style={{marginTop:14,fontSize:13,lineHeight:1.65,color:"#334155"}}>
+      <strong>Diagnóstico:</strong> {dailyPasture<=0 ? "La dieta configurada no requiere pastoreo." : periodSupply >= periodNeed ? "La oferta estimada de MS alcanza para el período; falta verificar calidad y distribución diaria." : "La oferta estimada de MS NO alcanza para sostener esta carga durante todo el período."}
+      {dailyPasture>0 && <span> {parcelDays < positive(occupancy) ? "La parcela no alcanza para los días de ocupación elegidos." : "La parcela cubre la ocupación elegida."} {rest < regrowthDays ? "El descanso previsto es menor al requerido para reponer el forraje removido." : "El descanso estimado permitiría recuperar el forraje removido."}</span>}
+      {mode==="target" && <span> La GMD objetivo es una hipótesis: <strong>no está validada nutricionalmente</strong> con este cálculo de materia seca.</span>}
+      {mode==="estimated" && <span> La GMD por energía es una <strong>aproximación exploratoria, no un modelo validado</strong>; no evalúa requerimientos de proteína metabolizable ni limitaciones de consumo. PB ponderada: {fmt(dietProtein)}%.</span>}
+    </div>
+    <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>{rationNote} Superficie del potrero seleccionado: {fmt(fieldArea)} ha. La duración de parcela supone disponibilidad homogénea y sin crecimiento durante la ocupación; la carga del período supone crecimiento uniforme y sin pérdidas adicionales.</div>
+  </div>;
+}
+
 export default function App() {
   const loadSaved = () => {
     try {
@@ -944,7 +1045,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 24: períodos estratégicos y cobertura alimenticia sin duplicar pasto y ración.
+              Versión 25: balance alimenticio y simulador de producción animal y pastoreo.
             </p>
           </div>
 
@@ -1270,6 +1371,8 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            <ProductionPlanner herd={herd} paddocks={paddocks} supplements={supplements} />
 
             <div style={panelStyle}>
               <div style={panelHeaderRowStyle}>
