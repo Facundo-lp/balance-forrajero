@@ -371,7 +371,6 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
   const [gmd, setGmd] = useState(0.75);
   const [period, setPeriod] = useState(90);
   const [area, setArea] = useState(12);
-  const [parcelArea, setParcelArea] = useState(2);
   const [entryMass, setEntryMass] = useState(2200);
   const [residual, setResidual] = useState(1100);
   const [utilization, setUtilization] = useState(75);
@@ -389,21 +388,18 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
   const intakePct = positive(lot?.intake || 2.8) / 100;
   const d = Math.max(1, Math.round(positive(period)));
   const grazingArea = positive(area);
-  const parcel = positive(parcelArea);
   const usablePerHa = Math.max(0, positive(entryMass) - positive(residual)) * positive(utilization) / 100;
   const validPeriods = supplements.filter(s => String(s.herdId) === String(lot?.id) && s.startDate && s.endDate && s.endDate > s.startDate);
-  const rationNote = validPeriods.length ? `Este lote tiene ${validPeriods.length} período(s) de ración en el balance general. Para el escenario nutricional, cargá la participación media de ración del período analizado.` : "No hay períodos de ración registrados para este lote.";
+  const rationNote = validPeriods.length ? `Este lote tiene ${validPeriods.length} período(s) de ración en el balance general. Para este escenario cargá la participación media de ración.` : "No hay períodos de ración registrados para este lote.";
   const [rationShare, setRationShare] = useState(0);
   const share = Math.min(1, positive(rationShare) / 100);
   const dietMe = positive(me) * (1-share) + positive(rationMe) * share;
   const dietProtein = positive(protein) * (1-share) + positive(rationProtein) * share;
-  // Aproximación de exploración: EM disponible menos mantenimiento, dividido
-  // por energía marginal de ganancia. No es un modelo NASEM validado.
+  // Aproximación exploratoria; no constituye un modelo NASEM validado.
   const estimateAt = w => {
     const dm = w * intakePct;
     const maintenance = 0.13 * Math.pow(Math.max(1,w), 0.75);
-    const energySurplus = dm * dietMe - maintenance;
-    return Math.max(0, Math.min(1.6, energySurplus / 8.5));
+    return Math.max(0, Math.min(1.6, (dm * dietMe - maintenance) / 8.5));
   };
   const estimatedGmd = estimateAt(startWeight);
   const chosenGmd = mode === "estimated" ? estimatedGmd : positive(gmd);
@@ -411,20 +407,25 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
   const avgWeight = (startWeight + endWeight) / 2;
   const dailyDm = heads * avgWeight * intakePct;
   const dailyPasture = dailyDm * (1-share);
-  const parcelDays = dailyPasture > 0 ? parcel * usablePerHa / dailyPasture : 0;
-  const parcelCount = parcel > 0 ? Math.floor(grazingArea / parcel) : 0;
-  const rest = parcelCount > 1 ? (parcelCount - 1) * parcelDays : 0;
-  const plannedRest = parcelCount > 1 ? (parcelCount - 1) * positive(occupancy) : 0;
-  const regrowthDays = positive(growth) > 0 ? Math.max(0, (positive(entryMass)-positive(residual)) / positive(growth)) : Infinity;
-  const maxOccupancyForRest = parcelCount > 1 && Number.isFinite(regrowthDays) ? regrowthDays / (parcelCount - 1) : 0;
+  const occupationDays = positive(occupancy);
+  // La superficie se calcula a partir de la demanda y no se solicita al usuario.
+  const recommendedParcel = usablePerHa > 0 ? dailyPasture * occupationDays / usablePerHa : Infinity;
+  const parcelCount = recommendedParcel > 0 && Number.isFinite(recommendedParcel) ? Math.floor(grazingArea / recommendedParcel + 1e-9) : 0;
+  const restAvailable = parcelCount > 1 ? (parcelCount - 1) * occupationDays : 0;
+  // El crecimiento permite recuperar la fracción removible, no necesariamente
+  // toda la masa sobre el remanente: el aprovechamiento ya descontó pérdidas.
+  const requiredGrowth = Math.max(0, positive(entryMass) - positive(residual));
+  const restRequired = positive(growth) > 0 ? requiredGrowth / positive(growth) : Infinity;
+  const returnInterval = parcelCount > 0 ? parcelCount * occupationDays : 0;
   const periodSupply = grazingArea * usablePerHa + grazingArea * positive(growth) * d * positive(utilization) / 100;
   const periodNeed = dailyPasture * d;
   const carryingHeads = heads > 0 && periodNeed > 0 ? Math.floor(heads * periodSupply / periodNeed) : 0;
+  const validRotation = dailyPasture > 0 && occupationDays > 0 && parcelCount >= 2 && restAvailable >= restRequired && periodSupply >= periodNeed;
   const fmt = (v, dec=1) => Number.isFinite(v) ? v.toLocaleString("es-UY", {maximumFractionDigits:dec, minimumFractionDigits:dec}) : "—";
   const cell = (label, value) => <div style={summaryCardStyle}><div style={{fontSize:12,color:"#64748b"}}>{label}</div><div style={{fontSize:22,fontWeight:700,color:"#0f172a",marginTop:5}}>{value}</div></div>;
   const fieldArea = positive(field?.hectares);
   return <div style={panelStyle}>
-    <h2 style={panelTitleStyle}>Producción animal y pastoreo rotativo · Simulador</h2>
+    <h2 style={panelTitleStyle}>Producción animal · Diseño automático de pastoreo rotativo</h2>
     <p style={{fontSize:13,color:"#475569"}}>Proyectá peso, carga y rotación. Los parámetros de calidad y disponibilidad deben medirse o estimarse por el técnico. Este módulo no altera todavía el balance mensual principal.</p>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}>
       <div><label style={smallLabelStyle}>Lote</label><select style={inputStyle} value={lot?.id ?? ""} onChange={e=>setLotId(e.target.value)}>{herd.map((h,i)=><option key={h.id} value={h.id}>Lote {i+1} · {h.category} · {h.heads} cab.</option>)}</select></div>
@@ -433,7 +434,6 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
       <div><label style={smallLabelStyle}>Duración del período (días)</label><input style={inputStyle} type="number" min="1" value={period} onChange={e=>setPeriod(e.target.value)}/></div>
       {mode === "target" && <div><label style={smallLabelStyle}>GMD objetivo (kg/cab/día)</label><input style={inputStyle} type="number" min="0" step="0.05" value={gmd} onChange={e=>setGmd(e.target.value)}/></div>}
       <div><label style={smallLabelStyle}>Superficie de rotación (ha)</label><input style={inputStyle} type="number" min="0" step="0.5" value={area} onChange={e=>setArea(e.target.value)}/></div>
-      <div><label style={smallLabelStyle}>Superficie de parcela (ha)</label><input style={inputStyle} type="number" min="0" step="0.5" value={parcelArea} onChange={e=>setParcelArea(e.target.value)}/></div>
       <div><label style={smallLabelStyle}>Disponibilidad inicial (kg MS/ha)</label><input style={inputStyle} type="number" min="0" value={entryMass} onChange={e=>setEntryMass(e.target.value)}/></div>
       <div><label style={smallLabelStyle}>Remanente objetivo (kg MS/ha)</label><input style={inputStyle} type="number" min="0" value={residual} onChange={e=>setResidual(e.target.value)}/></div>
       <div><label style={smallLabelStyle}>Aprovechamiento sobre removible (%)</label><input style={inputStyle} type="number" min="0" max="100" value={utilization} onChange={e=>setUtilization(e.target.value)}/></div>
@@ -449,22 +449,21 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
       {cell("GMD proyectada (kg/día)",fmt(chosenGmd,2))}
       {cell("Peso final proyectado (kg/cab)",fmt(endWeight))}
       {cell("Kg PV producidos por lote",fmt(heads * chosenGmd * d,0))}
-      {cell("Duración de parcela (días)",dailyPasture>0?fmt(parcelDays):"Sin pastoreo")}
-      {cell("Descanso con ocupación calculada (días)",parcelCount>1?fmt(rest):"Sin rotación")}
-      {cell("Descanso con ocupación deseada (días)",parcelCount>1?fmt(plannedRest):"Sin rotación")}
-      {cell("Parcelas completas",fmt(parcelCount,0))}
-      {cell("Ocupación máx. para descanso por rebrote (días)",parcelCount>1?fmt(maxOccupancyForRest):"—")}
-      {cell("Descanso por rebrote (días)",fmt(regrowthDays,0))}
+      {cell("Superficie recomendada por parcela (ha)",dailyPasture>0 && occupationDays>0?fmt(recommendedParcel,2):"Sin pastoreo")}
+      {cell("Parcelas posibles",parcelCount>0?fmt(parcelCount,0):"No alcanza")}
+      {cell("Ocupación por parcela (días)",fmt(occupationDays,1))}
+      {cell("Descanso disponible (días)",parcelCount>1?fmt(restAvailable,1):"Sin rotación")}
+      {cell("Descanso necesario estimado (días)",fmt(restRequired,1))}
+      {cell("Regreso a la misma parcela (cada tantos días)",parcelCount>1?fmt(returnInterval,1):"Sin rotación")}
       {cell("Carga orientativa (cabezas)",fmt(carryingHeads,0))}
       {cell("Saldo MS pastoril del período (kg)",fmt(periodSupply-periodNeed,0))}
     </div>
-    <div style={{marginTop:14,fontSize:13,lineHeight:1.65,color:"#334155"}}>
-      <strong>Diagnóstico:</strong> {dailyPasture<=0 ? "La dieta configurada no requiere pastoreo." : periodSupply >= periodNeed ? "La oferta estimada de MS alcanza para el período; falta verificar calidad y distribución diaria." : "La oferta estimada de MS NO alcanza para sostener esta carga durante todo el período."}
-      {dailyPasture>0 && <span> {parcelDays < positive(occupancy) ? "La parcela no alcanza para los días de ocupación elegidos." : "La parcela cubre la ocupación elegida."} {parcelCount<2 ? "No hay suficientes parcelas completas para calcular una rotación." : plannedRest < regrowthDays ? "Con la ocupación deseada, el descanso entre ingresos es insuficiente para el rebrote supuesto." : "Con la ocupación deseada, el descanso entre ingresos alcanza el tiempo de rebrote supuesto."} {parcelCount>1 && parcelDays>positive(occupancy) ? "La duración por disponibilidad es mayor que la ocupación deseada: deberás salir antes y dejar forraje remanente adicional, o subdividir las parcelas." : ""}</span>}
-      {mode==="target" && <span> La GMD objetivo es una hipótesis: <strong>no está validada nutricionalmente</strong> con este cálculo de materia seca.</span>}
-      {mode==="estimated" && <span> La GMD por energía es una <strong>aproximación exploratoria, no un modelo validado</strong>; no evalúa requerimientos de proteína metabolizable ni limitaciones de consumo. PB ponderada: {fmt(dietProtein)}%.</span>}
+    <div style={{marginTop:14,fontSize:13,lineHeight:1.65,color:validRotation?"#166534":"#9a3412"}}>
+      <strong>Diagnóstico de rotación:</strong> {dailyPasture<=0 ? "No se necesita superficie de pastoreo con la participación de ración configurada." : usablePerHa<=0 ? "No hay forraje removible: revisá disponibilidad y remanente." : occupationDays<=0 ? "Indicá días de ocupación mayores que cero." : parcelCount<2 ? "La superficie no permite al menos dos parcelas del tamaño requerido para alimentar al lote." : restAvailable < restRequired ? `El descanso disponible (${fmt(restAvailable)} días) es inferior al necesario (${fmt(restRequired)} días). Reducí carga, aumentá superficie, suplementá o ajustá la ocupación.` : periodSupply < periodNeed ? "El descanso alcanza, pero la oferta total de MS del período no alcanza la demanda." : "La rotación cumple los criterios simplificados de disponibilidad, descanso y oferta total del período."}
+      {mode==="target" && <span> La GMD objetivo es una hipótesis y <strong>no se valida nutricionalmente</strong> con este balance de MS.</span>}
+      {mode==="estimated" && <span> La GMD por energía es <strong>exploratoria, no validada</strong>; no evalúa proteína metabolizable ni consumo restringido. PB de dieta: {fmt(dietProtein)}%.</span>}
     </div>
-    <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>{rationNote} Superficie del potrero seleccionado: {fmt(fieldArea)} ha. El descanso se calcula como (número de parcelas completas − 1) × días de ocupación. Se muestran por separado los escenarios de ocupación calculada y deseada. La duración de parcela supone disponibilidad homogénea y sin crecimiento durante la ocupación; la carga del período supone crecimiento uniforme y sin pérdidas adicionales.</div>
+    <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>{rationNote} Superficie del potrero: {fmt(fieldArea)} ha. La superficie por parcela se calcula como demanda diaria pastoril × días de ocupación ÷ MS aprovechable/ha. El descanso disponible es (parcelas completas − 1) × ocupación. El descanso necesario es (disponibilidad inicial − remanente) ÷ crecimiento diario. Supone forraje uniforme, crecimiento constante y peso promedio durante el período; verificá disponibilidad al reingreso y ajustá en campo. El simulador todavía no modifica el balance mensual principal.</div>
   </div>;
 }
 
