@@ -362,61 +362,85 @@ function defaultSupplementRow() {
 }
 
 
-// Motor nutricional exploratorio basado en ecuaciones AFRC (1993) y CSIRO
-// reproducidas en la guía SAGC (Udelar, Simeone y Beretta, 2024, pp. 8-13).
-// Sin edad ni condición corporal medidas, se supone peso normal = peso actual.
-// EB=4.4 Mcal/kg MS es un supuesto técnico editable en código, no un dato de la guía.
+// Motor nutricional: AFRC (1993) y Australian Feeding Standards/CSIRO,
+// transcritos en Simeone y Beretta, Guía SAGC (Udelar, 2024), pp. 5 y 8-13.
+// Los coeficientes de proteína son REFERENCIAS INTERNAS de raigrás y maíz
+// de la Tabla III.1, no análisis del alimento particular del productor.
+// La PM de raciones comerciales no puede validarse con solo %PB y EM.
 function estimatePastureNutrition({weight, heads, area, days, forage, residual, utilization,
-  growth, me, digestibility, legumes, rationShare, rationMe, pastureCapPerHead=null, sex='steer', biotype='medium'}) {
-  const pv=Math.max(1,weight), nHeads=Math.max(0,heads), dDays=Math.max(1,days);
-  const s=sex==='heifer'?550:660; // Hereford/Angus medios, Cuadro 3
-  const z=Math.min(1.6,pv/s), fc=1;
-  const potential=0.025*s*z*(1.7-z)*fc;
-  const quality=Math.max(0,Math.min(1,1-1.7*(0.8-digestibility)+0.17*legumes));
+  growth, me, digestibility, legumes, rationShare, rationMe, protein=17,
+  rationProtein=16, pastureCapPerHead=null, sex='steer'}) {
+  const pv=Math.max(1,weight), nHeads=Math.max(0,heads);
+  const s=sex==='heifer'?550:660;
+  // Sin edad ni condición corporal, z=PV/peso adulto es un supuesto explícito.
+  const z=Math.min(1.6,pv/s);
+  const potential=Math.max(0,0.025*s*z*(1.7-z));
+  const quality=Math.max(0,Math.min(1.2,1-1.7*(0.8-digestibility)+0.17*legumes));
   const h=Math.max(0,forage)/1000;
   const harvest=(1-Math.exp(-0.8*h))*(1+0.6*Math.exp(-0.5*h*h));
   const voluntaryPasture=Math.max(0,potential*quality*harvest);
-  const pastureSupply=Math.max(0,area)*(Math.max(0,forage-residual)*utilization/100+
-    Math.max(0,growth)*dDays*utilization/100);
-  // La fracción de ración es una aproximación media del escenario, no reemplaza
-  // los períodos reales de suplementación del balance principal.
   const share=Math.max(0,Math.min(1,rationShare));
-  // Un único límite físico de oferta diaria: la reserva inicial se distribuye
-  // en el horizonte y se agrega el crecimiento diario. No se suma nuevamente
-  // una reserva acumulada ni se permite gastar el crecimiento de días futuros.
-  const pastureIntake=Math.min(voluntaryPasture*(1-share), pastureCapPerHead === null
-    ? (nHeads>0?pastureSupply/(nHeads*dDays):0)
-    : Math.max(0,pastureCapPerHead));
+  const pastureCap=Math.max(0,pastureCapPerHead===null?Infinity:pastureCapPerHead);
+  const pastureIntake=Math.min(voluntaryPasture*(1-share),pastureCap);
+  // Participación de ración = % de la MS consumida, supuesto de escenario.
   const totalIntake=share>=0.999?potential:pastureIntake/Math.max(0.001,1-share);
   const supplementIntake=Math.max(0,totalIntake-pastureIntake);
-  const emIntake=pastureIntake*me+supplementIntake*rationMe; // Mcal/d
+  const emIntake=pastureIntake*me+supplementIntake*rationMe;
   const dietEm=totalIntake>0?emIntake/totalIntake:me;
-  const qm=Math.max(0.01,Math.min(0.95,dietEm/4.4));
+  const qm=Math.max(0.01,Math.min(0.95,dietEm/4.4)); // EB=4.4 Mcal/kg, supuesto
   const km=0.35*qm+0.503, kg=0.78*qm+0.006;
-  const enBasal=0.53*Math.pow(pv/1.08,0.67); // MJ/d
-  const enBasicAct=0.0071*pv; // MJ/d
-  const forageGreen=Math.max(0.05,forage/1000); // t MS/ha, supuesto todo verde
-  const enGrazingMcal=((0.006*pastureIntake*(0.9-digestibility)+0.05/(forageGreen+3))*pv)/4.184;
-  const emMaintenance=(enBasal+enBasicAct+enGrazingMcal*4.184)/km/4.184;
-  const c2=sex==='heifer'?1.15:1; // biotipo medio
-  const growthNeed=g=>{
-    const veg=c2*(4.1+0.0332*pv-0.000009*pv*pv)*(1-0.147*g);
-    return g*Math.max(0,veg)/kg/4.184;
-  };
+  const enBasal=0.53*Math.pow(pv/1.08,0.67); // MJ/día
+  const enBasicAct=0.0071*pv;
+  const greenTons=Math.max(0.05,forage/1000); // se supone todo el forraje verde
+  const enGrazing=((0.006*pastureIntake*(0.9-digestibility)+0.05/(greenTons+3))*pv); // MJ/d
+  const emMaintenance=(enBasal+enBasicAct+enGrazing)/km/4.184;
+  const c2=sex==='heifer'?1.15:1;
+  const growthNeed=g=>g*c2*(4.1+0.0332*pv-0.000009*pv*pv)*(1-0.147*g)/kg/4.184;
   const surplus=emIntake-emMaintenance;
-  // La función energética AFRC es creciente en el dominio productivo usual,
-  // pero NO es monótona para ganancias arbitrariamente altas. Evitamos
-  // extrapolar fuera de su rama creciente (derivada positiva).
-  const a=0.147;
-  const maxIncreasing=1/(2*a);
-  let lo=0,hi=maxIncreasing;
-  if(surplus>0)for(let i=0;i<60;i++){
-    const mid=(lo+hi)/2;
-    if(growthNeed(mid)<=surplus)lo=mid;else hi=mid;
+  // PM disponible (AFRC, p.13): síntesis microbiana limitada por EMF o ERDP.
+  // Referencia ryegrass a=.34,b=.57,c=.10,ADIN=.5; suplemento se
+  // aproxima con perfil de maíz grano y NO representa una ración comercial.
+  const proteinSources=[
+    {dm:pastureIntake,cp:protein*10,emf:me*(2.56/2.78),a:.34,b:.57,c:.10,adin:.5},
+    {dm:supplementIntake,cp:rationProtein*10,emf:rationMe*(2.90/3.00),a:.26,b:.69,c:.01,adin:.02}
+  ];
+  const level=Math.max(0.01,emIntake/Math.max(.01,emMaintenance));
+  const y=7+6*(1-Math.exp(-.35*level));
+  const r=-.024+.179*(1-Math.exp(-.278*level));
+  let fermentable=0,erdp=0,udpDigestible=0;
+  for(const f of proteinSources){
+    const qdp=f.a*f.cp;
+    const sdp=(f.b*f.c/(f.c+Math.max(.001,r)))*f.cp;
+    fermentable+=f.dm*f.emf*4.184;
+    erdp+=f.dm*(.8*qdp+sdp);
+    udpDigestible+=f.dm*.9*Math.max(0,f.cp-qdp-sdp-6.25*f.adin);
   }
-  const energyOutsideRange=surplus>growthNeed(maxIncreasing);
-  return {gmd:surplus>0?lo:0, energyOutsideRange, potential, pastureIntake, totalIntake, emIntake,
-    emMaintenance, pastureSupply, qm, quality, harvest, surplus};
+  const microbialProtein=Math.min(y*fermentable,erdp)*.75*.85;
+  const pmSupply=microbialProtein+udpDigestible;
+  const pmMaintenance=2.30*Math.pow(pv,.75);
+  const c6=sex==='heifer'?.9:1;
+  const pmGrowthNeed=g=>c6*(168.07-.16869*pv+.0001633*pv*pv)*(1.12-.1223*g)*g/.59;
+  // Resolver en rama creciente, con rango fisiológico de evaluación.
+  // 2 kg/d no es una predicción máxima biológica, sino límite de validez
+  // OPERATIVO de este modelo sin edad, condición corporal ni análisis de PM.
+  const MAX_TEST_GMD=2;
+  function solve(limit,fn){
+    if(limit<=0)return 0;
+    let lo=0,hi=MAX_TEST_GMD;
+    for(let i=0;i<50;i++){
+      const mid=(lo+hi)/2;
+      if(fn(mid)<=limit)lo=mid;else hi=mid;
+    }
+    return lo;
+  }
+  const gmdEnergy=solve(surplus,growthNeed);
+  const gmdProtein=solve(pmSupply-pmMaintenance,pmGrowthNeed);
+  const gmd=Math.min(gmdEnergy,gmdProtein);
+  const outsideRange=surplus>growthNeed(MAX_TEST_GMD)||pmSupply-pmMaintenance>pmGrowthNeed(MAX_TEST_GMD);
+  const pmApproximate=supplementIntake>0.001;
+  return {gmd, gmdEnergy,gmdProtein, energyOutsideRange:outsideRange,
+    pmApproximate,pmSupply,pmMaintenance,potential,pastureIntake,
+    supplementIntake,totalIntake,emIntake,emMaintenance,qm,quality,harvest,surplus};
 }
 
 // Planificador independiente: los resultados son escenarios y no reemplazan
@@ -476,35 +500,47 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
   const pastureDmHead = heads > 0 ? Math.min(potentialPastureHead, periodSupply / (heads * d)) : 0;
   const actualDmHead = share >= 1 ? potentialDmHead : (1-share > 0 ? pastureDmHead / (1-share) : potentialDmHead);
   const dmCoverage = potentialDmHead > 0 ? Math.min(1, actualDmHead / potentialDmHead) : 0;
-  // Simulación diaria coherente: la reserva inicial removible se prorratea
-  // durante el período y se suma únicamente el crecimiento de ese día.
-  // Esto evita consumir en los primeros días el forraje de todo el horizonte
-  // y, a la vez, volver a limitar el consumo por el promedio del período.
+  // Simulación día a día: no se consume crecimiento de días futuros.
+  // Reserva utilizable de todo el potrero, con crecimiento incorporado al día.
+  // Es un balance agregado: no reemplaza la simulación de franjas por potrero.
   let simulatedWeight=startWeight, gainSum=0, estimatedGmd=0;
   const initialUsableReserve=grazingArea*usablePerHa;
   const dailyGrowth=grazingArea*positive(growth)*positive(utilization)/100;
-  const dailyForageBudget=(initialUsableReserve/d)+dailyGrowth;
-  let accumulatedPasture=0;
-  let energyOutsideRange=false;
+  let forageReserve=initialUsableReserve;
+  let accumulatedPasture=0, accumulatedRation=0;
+  let energyOutsideRange=false, proteinApproximate=false;
+  let maxDailyGmd=0, lastDailyGmd=0, energyDeficit=false;
+  const female=String(lot?.category||'').toLowerCase().includes('vaquillona');
+  const reproductive=String(lot?.category||'').toLowerCase().includes('vaca');
   for(let day=0;day<d;day++){
-    const pastureCap=heads>0?dailyForageBudget/heads:0;
+    forageReserve+=dailyGrowth;
+    const pastureCap=heads>0?forageReserve/heads:0;
     const dayResult=estimatePastureNutrition({weight:simulatedWeight,heads,area:grazingArea,
       days:d,forage:positive(entryMass),residual:positive(residual),
       utilization:positive(utilization),growth:positive(growth),me:positive(me),
       digestibility,legumes:0,rationShare:share,rationMe:positive(rationMe),
-      pastureCapPerHead:pastureCap});
-    accumulatedPasture+=dayResult.pastureIntake*heads;
+      protein:positive(protein),rationProtein:positive(rationProtein),
+      sex:female?'heifer':'steer',pastureCapPerHead:pastureCap});
+    const consumed=dayResult.pastureIntake*heads;
+    forageReserve=Math.max(0,forageReserve-consumed);
+    accumulatedPasture+=consumed;
+    accumulatedRation+=dayResult.supplementIntake*heads;
     simulatedWeight+=dayResult.gmd;
     gainSum+=dayResult.gmd;
+    lastDailyGmd=dayResult.gmd;
+    maxDailyGmd=Math.max(maxDailyGmd,dayResult.gmd);
     energyOutsideRange=energyOutsideRange||dayResult.energyOutsideRange;
+    proteinApproximate=proteinApproximate||dayResult.pmApproximate;
+    energyDeficit=energyDeficit||dayResult.surplus<0;
   }
   estimatedGmd=gainSum/d;
+  const modelReliable=!energyOutsideRange&&!reproductive&&!proteinApproximate&&!energyDeficit;
   const targetWeight=startWeight+positive(gmd)*d;
   const endWeight=simulatedWeight;
   const avgWeight=(startWeight+endWeight)/2;
   const dailyDm=heads*avgWeight*intakePct;
-  const dailyPasture=dailyDm*(1-share);
-  const targetFeasible=estimatedGmd+0.01>=positive(gmd);
+  const dailyPasture=heads>0?accumulatedPasture/d:0;
+  const targetFeasible=modelReliable && estimatedGmd+0.01>=positive(gmd);
   const chosenGmd=estimatedGmd;
   const occupationDays = positive(occupancy);
   // La superficie se calcula a partir de la demanda y no se solicita al usuario.
@@ -557,8 +593,8 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
     <h3 style={{fontSize:16,marginTop:20,marginBottom:8}}>Producción animal</h3>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:12}}>
       {mode === "target" && cell("GMD objetivo (kg/cab/día)",fmt(positive(gmd),2))}
-      {cell("GMD energética preliminar (kg/cab/día)",estimatedGmd>1.5?"No validada":fmt(estimatedGmd,2))}
-      {cell("Peso final estimado (kg/cab)",fmt(endWeight))}
+      {cell("GMD energética preliminar (kg/cab/día)",modelReliable?fmt(estimatedGmd,2):"No validada")}
+      {cell("Peso final estimado (kg/cab)",modelReliable?fmt(endWeight):"No validado")}
       {mode === "target" && cell("Peso final objetivo (kg/cab)",fmt(targetWeight))}
       {cell("Asignación de forraje (% PV/día)",heads>0?fmt(periodAf,2)+"%":"Sin animales")}
     </div>
@@ -570,9 +606,9 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
       {cell("Descanso necesario (días)",fmt(restRequired,1))}
     </div>
     <div style={{marginTop:14,padding:14,border:"1px solid #cbd5e1",borderRadius:12,fontSize:14,lineHeight:1.7}}>
-      <strong>Conclusión:</strong> {estimatedGmd>1.5 ? 'La ecuación energética arroja una GMD elevada que no debe utilizarse como predicción hasta comprobar proteína metabolizable y contrastar ensayos. ' : ''}{diagnosis} {rotationDiagnosis} {energyOutsideRange ? 'Advertencia: la energía calculada supera el rango creciente de la ecuación de crecimiento; la GMD no está validada para esta dieta.' : ''}
+      <strong>Conclusión:</strong> {!modelReliable ? 'La GMD y el peso final no están validados para este escenario. ' : diagnosis} {rotationDiagnosis} {energyOutsideRange ? 'Advertencia: el modelo alcanzó el límite de evaluación de 2 kg/día; no extrapolamos la ganancia. ' : ''}{energyDeficit ? 'Advertencia: hubo días con déficit energético; este motor no estima pérdidas de peso. ' : ''}{proteinApproximate ? 'Advertencia: para ración comercial faltan fracciones de degradabilidad proteica. ' : ''}
     </div>
-    <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>{rationNote} Superficie del potrero: {fmt(fieldArea)} ha. La superficie por parcela se calcula como demanda diaria pastoril × días de ocupación ÷ MS aprovechable/ha. El descanso disponible es (parcelas completas − 1) × ocupación. El descanso necesario es (disponibilidad inicial − remanente) ÷ crecimiento diario. Supone forraje uniforme, crecimiento constante y peso promedio durante el período; verificá disponibilidad al reingreso y ajustá en campo. La estimación de GMD responde a la cantidad de animales cuando la oferta limita el consumo. La GMD estimada es orientativa: se calcula con energía AFRC y consumo CSIRO, sin comprobación de proteína metabolizable. El presupuesto de forraje reparte la reserva inicial entre los días elegidos, por lo que cambiar el horizonte puede modificar la GMD media real; no equivale a una medición de ganancia. El simulador todavía no modifica el balance mensual principal.</div>
+    <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>{rationNote} Superficie del potrero: {fmt(fieldArea)} ha. La superficie por parcela se calcula como demanda diaria pastoril × días de ocupación ÷ MS aprovechable/ha. El descanso disponible es (parcelas completas − 1) × ocupación. El descanso necesario es (disponibilidad inicial − remanente) ÷ crecimiento diario. Supone forraje uniforme, crecimiento constante y peso promedio durante el período; verificá disponibilidad al reingreso y ajustá en campo. El motor comprueba energía y proteína metabolizable AFRC, con coeficientes de referencia de la guía SAGC. Para raciones comerciales falta el perfil real de degradabilidad y no se valida la GMD. El forraje se descuenta día a día, sin anticipar el crecimiento futuro. Sin edad, condición corporal y análisis del alimento, los resultados son orientativos y requieren contraste experimental. El simulador todavía no modifica el balance mensual principal.</div>
   </div>;
 }
 
