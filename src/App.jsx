@@ -1336,7 +1336,7 @@ const topGridStyle = {
 
 const midGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1.2fr 0.8fr",
+  gridTemplateColumns: "minmax(0, 1fr)",
   gap: 16,
   marginBottom: 24,
 };
@@ -1427,16 +1427,15 @@ const paddockRow2Style = {
 
 const herdGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1fr 0.7fr 0.7fr 0.7fr auto",
-  gap: 8,
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 170px), 1fr))",
+  gap: 12,
   alignItems: "end",
 };
 
 const supplementRowStyle = {
   display: "grid",
-  gridTemplateColumns:
-    "1fr 0.65fr 0.65fr 0.8fr 0.8fr 0.65fr 0.75fr 0.75fr 0.75fr auto",
-  gap: 8,
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
+  gap: 12,
   alignItems: "end",
 };
 
@@ -1452,6 +1451,8 @@ const smallLabelStyle = {
 
 const inputStyle = {
   width: "100%",
+  minWidth: 0,
+  fontSize: 15,
   marginTop: 4,
   padding: "10px 12px",
   borderRadius: 10,
