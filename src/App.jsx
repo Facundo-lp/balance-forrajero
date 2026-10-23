@@ -381,7 +381,12 @@ function estimatePastureNutrition({weight, heads, area, days, forage, residual, 
   // La fracción de ración es una aproximación media del escenario, no reemplaza
   // los períodos reales de suplementación del balance principal.
   const share=Math.max(0,Math.min(1,rationShare));
-  const pastureIntake=Math.min(voluntaryPasture*(1-share), nHeads>0?pastureSupply/(nHeads*dDays):0, pastureCapPerHead === null ? Infinity : Math.max(0,pastureCapPerHead));
+  // Un único límite físico de oferta diaria: la reserva inicial se distribuye
+  // en el horizonte y se agrega el crecimiento diario. No se suma nuevamente
+  // una reserva acumulada ni se permite gastar el crecimiento de días futuros.
+  const pastureIntake=Math.min(voluntaryPasture*(1-share), pastureCapPerHead === null
+    ? (nHeads>0?pastureSupply/(nHeads*dDays):0)
+    : Math.max(0,pastureCapPerHead));
   const totalIntake=share>=0.999?potential:pastureIntake/Math.max(0.001,1-share);
   const supplementIntake=Math.max(0,totalIntake-pastureIntake);
   const emIntake=pastureIntake*me+supplementIntake*rationMe; // Mcal/d
@@ -399,12 +404,18 @@ function estimatePastureNutrition({weight, heads, area, days, forage, residual, 
     return g*Math.max(0,veg)/kg/4.184;
   };
   const surplus=emIntake-emMaintenance;
-  let lo=0,hi=2.0; // rango prudente para búsqueda: NO equivale a un techo biológico
-  if(surplus>0)for(let i=0;i<50;i++){
+  // La función energética AFRC es creciente en el dominio productivo usual,
+  // pero NO es monótona para ganancias arbitrariamente altas. Evitamos
+  // extrapolar fuera de su rama creciente (derivada positiva).
+  const a=0.147;
+  const maxIncreasing=1/(2*a);
+  let lo=0,hi=maxIncreasing;
+  if(surplus>0)for(let i=0;i<60;i++){
     const mid=(lo+hi)/2;
     if(growthNeed(mid)<=surplus)lo=mid;else hi=mid;
   }
-  return {gmd:surplus>0?lo:0, potential, pastureIntake, totalIntake, emIntake,
+  const energyOutsideRange=surplus>growthNeed(maxIncreasing);
+  return {gmd:surplus>0?lo:0, energyOutsideRange, potential, pastureIntake, totalIntake, emIntake,
     emMaintenance, pastureSupply, qm, quality, harvest, surplus};
 }
 
@@ -465,27 +476,27 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
   const pastureDmHead = heads > 0 ? Math.min(potentialPastureHead, periodSupply / (heads * d)) : 0;
   const actualDmHead = share >= 1 ? potentialDmHead : (1-share > 0 ? pastureDmHead / (1-share) : potentialDmHead);
   const dmCoverage = potentialDmHead > 0 ? Math.min(1, actualDmHead / potentialDmHead) : 0;
-  // Proyección día a día: cambia el consumo y los requerimientos con el peso.
-  // Los valores de calidad y superficie son constantes dentro del escenario.
+  // Simulación diaria coherente: la reserva inicial removible se prorratea
+  // durante el período y se suma únicamente el crecimiento de ese día.
+  // Esto evita consumir en los primeros días el forraje de todo el horizonte
+  // y, a la vez, volver a limitar el consumo por el promedio del período.
   let simulatedWeight=startWeight, gainSum=0, estimatedGmd=0;
-  // Balance diario de forraje: el crecimiento se incorpora cada día y el
-  // consumo se descuenta de la reserva; no se reutiliza la misma MS.
-  let foragePool=grazingArea*usablePerHa;
+  const initialUsableReserve=grazingArea*usablePerHa;
   const dailyGrowth=grazingArea*positive(growth)*positive(utilization)/100;
+  const dailyForageBudget=(initialUsableReserve/d)+dailyGrowth;
   let accumulatedPasture=0;
+  let energyOutsideRange=false;
   for(let day=0;day<d;day++){
-    foragePool+=dailyGrowth;
-    const pastureCap=heads>0?foragePool/heads:0;
+    const pastureCap=heads>0?dailyForageBudget/heads:0;
     const dayResult=estimatePastureNutrition({weight:simulatedWeight,heads,area:grazingArea,
       days:d,forage:positive(entryMass),residual:positive(residual),
       utilization:positive(utilization),growth:positive(growth),me:positive(me),
       digestibility,legumes:0,rationShare:share,rationMe:positive(rationMe),
       pastureCapPerHead:pastureCap});
-    const pastureUsed=dayResult.pastureIntake*heads;
-    foragePool=Math.max(0,foragePool-pastureUsed);
-    accumulatedPasture+=pastureUsed;
+    accumulatedPasture+=dayResult.pastureIntake*heads;
     simulatedWeight+=dayResult.gmd;
     gainSum+=dayResult.gmd;
+    energyOutsideRange=energyOutsideRange||dayResult.energyOutsideRange;
   }
   estimatedGmd=gainSum/d;
   const targetWeight=startWeight+positive(gmd)*d;
@@ -509,7 +520,7 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
   const carryingHeads = heads > 0 && periodNeed > 0 ? Math.floor(heads * periodSupply / periodNeed) : 0;
   const validRotation = dailyPasture > 0 && occupationDays > 0 && parcelCount >= 2 && restAvailable >= restRequired && periodSupply >= periodNeed;
   const gmdGap=positive(gmd)-estimatedGmd;
-  const feedShortage=foragePool<1 && periodSupply<dailyPasture*d;
+  const feedShortage=periodSupply<dailyPasture*d;
   const diagnosis=mode==='target'
     ? (gmdGap>0.05 ? `Con ${heads} animales, la GMD estimada (${estimatedGmd.toFixed(2)} kg/día) queda por debajo de la meta (${positive(gmd).toFixed(2)} kg/día).` : `La GMD estimada es compatible con la meta ingresada bajo los supuestos del modelo.`)
     : `Con ${heads} animales, la GMD estimada es ${estimatedGmd.toFixed(2)} kg/día.`;
@@ -546,7 +557,7 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
     <h3 style={{fontSize:16,marginTop:20,marginBottom:8}}>Producción animal</h3>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:12}}>
       {mode === "target" && cell("GMD objetivo (kg/cab/día)",fmt(positive(gmd),2))}
-      {cell("GMD estimada (kg/cab/día)",fmt(estimatedGmd,2))}
+      {cell("GMD energética preliminar (kg/cab/día)",estimatedGmd>1.5?"No validada":fmt(estimatedGmd,2))}
       {cell("Peso final estimado (kg/cab)",fmt(endWeight))}
       {mode === "target" && cell("Peso final objetivo (kg/cab)",fmt(targetWeight))}
       {cell("Asignación de forraje (% PV/día)",heads>0?fmt(periodAf,2)+"%":"Sin animales")}
@@ -559,9 +570,9 @@ function ProductionPlanner({ herd, paddocks, supplements }) {
       {cell("Descanso necesario (días)",fmt(restRequired,1))}
     </div>
     <div style={{marginTop:14,padding:14,border:"1px solid #cbd5e1",borderRadius:12,fontSize:14,lineHeight:1.7}}>
-      <strong>Conclusión:</strong> {diagnosis} {rotationDiagnosis}
+      <strong>Conclusión:</strong> {estimatedGmd>1.5 ? 'La ecuación energética arroja una GMD elevada que no debe utilizarse como predicción hasta comprobar proteína metabolizable y contrastar ensayos. ' : ''}{diagnosis} {rotationDiagnosis} {energyOutsideRange ? 'Advertencia: la energía calculada supera el rango creciente de la ecuación de crecimiento; la GMD no está validada para esta dieta.' : ''}
     </div>
-    <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>{rationNote} Superficie del potrero: {fmt(fieldArea)} ha. La superficie por parcela se calcula como demanda diaria pastoril × días de ocupación ÷ MS aprovechable/ha. El descanso disponible es (parcelas completas − 1) × ocupación. El descanso necesario es (disponibilidad inicial − remanente) ÷ crecimiento diario. Supone forraje uniforme, crecimiento constante y peso promedio durante el período; verificá disponibilidad al reingreso y ajustá en campo. La estimación de GMD responde a la cantidad de animales cuando la oferta limita el consumo. La GMD estimada es orientativa; no incluye aún verificación completa de proteína metabolizable. El simulador todavía no modifica el balance mensual principal.</div>
+    <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>{rationNote} Superficie del potrero: {fmt(fieldArea)} ha. La superficie por parcela se calcula como demanda diaria pastoril × días de ocupación ÷ MS aprovechable/ha. El descanso disponible es (parcelas completas − 1) × ocupación. El descanso necesario es (disponibilidad inicial − remanente) ÷ crecimiento diario. Supone forraje uniforme, crecimiento constante y peso promedio durante el período; verificá disponibilidad al reingreso y ajustá en campo. La estimación de GMD responde a la cantidad de animales cuando la oferta limita el consumo. La GMD estimada es orientativa: se calcula con energía AFRC y consumo CSIRO, sin comprobación de proteína metabolizable. El presupuesto de forraje reparte la reserva inicial entre los días elegidos, por lo que cambiar el horizonte puede modificar la GMD media real; no equivale a una medición de ganancia. El simulador todavía no modifica el balance mensual principal.</div>
   </div>;
 }
 
