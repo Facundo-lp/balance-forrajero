@@ -825,7 +825,14 @@ export default function App() {
     // Balance de alimentos en MS: no aplicar sustitución aquí porque la
     // demanda original ya representa el consumo total de MS estimado.
     const totalFeedOfferByMonth = MONTHS.map((_, i) => offerByMonth[i] + supplementDmByMonth[i]);
-    const totalFeedBalanceByMonth = MONTHS.map((_, i) => totalFeedOfferByMonth[i] - demandByMonth[i]);
+    // Balance de cobertura real: no atribuir pasto a animales que están
+    // exclusivamente a ración ni convertir exceso de ración en pasto.
+    // El excedente de pasto se informa por separado como saldo pastoril.
+    const coveredPastureByMonth = MONTHS.map((_, i) => Math.min(offerByMonth[i], adjustedDemandByMonth[i]));
+    const coveredRationByMonth = MONTHS.map((_, i) => Math.min(supplementDmByMonth[i], pastureReductionByMonth[i]));
+    const totalFeedBalanceByMonth = MONTHS.map((_, i) =>
+      coveredPastureByMonth[i] + coveredRationByMonth[i] - demandByMonth[i]
+    );
 
     const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
@@ -937,7 +944,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 21: suplementación por lote, consumo % PV y balance alimenticio.
+              Versión 24: períodos estratégicos y cobertura alimenticia sin duplicar pasto y ración.
             </p>
           </div>
 
@@ -1319,7 +1326,7 @@ export default function App() {
                         <SummaryCard title="Ración total (t MS)" value={formatNumber(stats.totalDm/1000,2)}/>
                         <SummaryCard title="Costo total (USD)" value={formatNumber(stats.cost,2)}/>
                       </div>
-                      {s.feedingMode === "complete" && <div style={{color:"#92400e",fontSize:12,marginTop:8}}>100% ración elimina la demanda pastoril del lote en ese período. Verificá que la dieta completa aporte fibra efectiva y nutrientes adecuados.</div>}
+                      {s.feedingMode === "complete" && <div style={{color:"#92400e",fontSize:12,marginTop:8}}>100% ración elimina la demanda pastoril del lote en ese período. Si la ración aporta menos MS que la demanda animal, la diferencia figurará como déficit. Verificá fibra efectiva y nutrientes adecuados.</div>}
                     </div>
                   );})
                 )}
@@ -1341,7 +1348,7 @@ export default function App() {
                 <Line type="monotone" dataKey="oferta" name="Oferta de pasto" stroke="#16a34a" strokeWidth={3} />
                 <Line type="monotone" dataKey="racion" name="Oferta de ración MS" stroke="#2563eb" strokeWidth={3} />
                 <Line type="monotone" dataKey="demanda" name="Demanda animal total" stroke="#ea580c" strokeWidth={3} />
-                <Line type="monotone" dataKey="balanceAlimenticio" name="Balance alimenticio total" stroke="#9333ea" strokeWidth={3} />
+                <Line type="monotone" dataKey="balanceAlimenticio" name="Saldo de cobertura alimenticia" stroke="#9333ea" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1360,7 +1367,7 @@ export default function App() {
                   <th style={thStyle}>Demanda ajustada</th>
                   <th style={thStyle}>Suplemento MS</th>
                   <th style={thStyle}>Oferta total MS</th>
-                  <th style={thStyle}>Balance alimenticio total</th>
+                  <th style={thStyle}>Saldo cobertura alimenticia</th>
                   <th style={thStyle}>Balance</th>
                   <th style={thStyle}>Balance real</th>
                 </tr>
