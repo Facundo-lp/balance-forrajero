@@ -299,6 +299,7 @@ function defaultSupplementRow() {
   const animal = ANIMAL_CATEGORIES[0];
   return {
     id: Date.now(),
+    herdId: "",
     category: animal.label,
     heads: 0,
     weight: animal.weight,
@@ -427,6 +428,8 @@ export default function App() {
       Math.round(results.pastureReductionByMonth[i]),
       Math.round(results.adjustedDemandByMonth[i]),
       Math.round(results.supplementDmByMonth[i]),
+      Math.round(results.totalFeedOfferByMonth[i]),
+      Math.round(results.totalFeedBalanceByMonth[i]),
       Math.round(results.balanceByMonth[i]),
       Math.round(results.realBalanceByMonth[i]),
     ]);
@@ -439,6 +442,8 @@ export default function App() {
         "Reduccion pasto por sustitucion",
         "Demanda ajustada",
         "Suplemento MS",
+        "Oferta total MS",
+        "Balance alimenticio total",
         "Balance original",
         "Balance real",
       ],
@@ -600,6 +605,7 @@ export default function App() {
 
   const removeHerd = (id) => {
     setHerd((prev) => prev.filter((h) => h.id !== id));
+    // Conservar suplementaciones históricas para reasignarlas, sin contabilizarlas.
   };
 
   const addSupplementRow = () => {
@@ -718,31 +724,27 @@ export default function App() {
       }, 0);
     });
 
-    const supplementDmByMonth = MONTHS.map((m) => {
-      return supplements.reduce((sum, s) => {
-        if (!monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
+    // La suplementación pertenece a un lote concreto, nunca a toda una categoría.
+    // Se limita al período de permanencia del lote y a los meses seleccionados.
+    const supplementDmByMonth = MONTHS.map((m) =>
+      supplements.reduce((sum, s) => {
+        const lot = herd.find((h) => String(h.id) === String(s.herdId));
+        if (!lot || !monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
+        const days = activeHerdDays(lot, m.index, exerciseYear);
+        const dailyDm = n(lot.heads) * n(s.kgRation) * n(s.dmPercent) / 100;
+        return sum + dailyDm * days;
+      }, 0)
+    );
 
-        const dailyDm =
-          n(s.heads) *
-          n(s.kgRation) *
-          (n(s.dmPercent) / 100);
-
-        return sum + dailyDm * new Date(exerciseYear + (m.index < 3 ? 1 : 0), m.index, 0).getDate();
-      }, 0);
-    });
-
-    const pastureReductionByMonth = MONTHS.map((m) => {
-      return supplements.reduce((sum, s) => {
-        if (!monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
-
-        const dailyDm =
-          n(s.heads) *
-          n(s.kgRation) *
-          (n(s.dmPercent) / 100);
-
-        return sum + dailyDm * new Date(exerciseYear + (m.index < 3 ? 1 : 0), m.index, 0).getDate() * n(s.substitutionRate);
-      }, 0);
-    });
+    const pastureReductionByMonth = MONTHS.map((m, i) =>
+      supplements.reduce((sum, s) => {
+        const lot = herd.find((h) => String(h.id) === String(s.herdId));
+        if (!lot || !monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
+        const days = activeHerdDays(lot, m.index, exerciseYear);
+        const dailyDm = n(lot.heads) * n(s.kgRation) * n(s.dmPercent) / 100;
+        return sum + dailyDm * days * n(s.substitutionRate);
+      }, 0)
+    );
 
     const adjustedDemandByMonth = MONTHS.map((_, i) =>
       Math.max(0, demandByMonth[i] - pastureReductionByMonth[i])
@@ -759,6 +761,11 @@ export default function App() {
     const realBalanceByMonth = MONTHS.map(
       (_, i) => offerByMonth[i] - adjustedDemandByMonth[i]
     );
+
+    // Balance de alimentos en MS: no aplicar sustitución aquí porque la
+    // demanda original ya representa el consumo total de MS estimado.
+    const totalFeedOfferByMonth = MONTHS.map((_, i) => offerByMonth[i] + supplementDmByMonth[i]);
+    const totalFeedBalanceByMonth = MONTHS.map((_, i) => totalFeedOfferByMonth[i] - demandByMonth[i]);
 
     const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
@@ -779,6 +786,8 @@ export default function App() {
       demandaAjustada: Math.round(adjustedDemandByMonth[i]),
       balance: Math.round(balanceByMonth[i]),
       balanceReal: Math.round(realBalanceByMonth[i]),
+      ofertaTotal: Math.round(totalFeedOfferByMonth[i]),
+      balanceAlimenticio: Math.round(totalFeedBalanceByMonth[i]),
     }));
 
     const monthlyDeficits = MONTHS.filter((_, i) => balanceByMonth[i] < 0).map(
@@ -832,6 +841,8 @@ export default function App() {
       demandByMonth,
       adjustedDemandByMonth,
       supplementDmByMonth,
+      totalFeedOfferByMonth,
+      totalFeedBalanceByMonth,
       pastureReductionByMonth,
       supplementNetByMonth,
       balanceByMonth,
@@ -1199,15 +1210,13 @@ export default function App() {
                   supplements.map((s) => (
                     <div key={s.id} style={boxStyle}>
                       <div style={supplementRowStyle}>
-                        <div>
-                          <label style={smallLabelStyle}>Categoría</label>
-                          <select value={s.category} onChange={(e) => updateSupplementRow(s.id, "category", e.target.value)} style={inputStyle}>
-                            {ANIMAL_CATEGORIES.map((a) => (<option key={a.label}>{a.label}</option>))}
+                        <div style={{gridColumn:"span 2"}}>
+                          <label style={smallLabelStyle}>Lote a suplementar</label>
+                          <select value={s.herdId ?? ""} onChange={(e) => updateSupplementRow(s.id, "herdId", e.target.value)} style={inputStyle}>
+                            <option value="">Seleccionar lote…</option>
+                            {herd.map((h, idx) => <option key={h.id} value={String(h.id)}>Lote {idx + 1} · {h.category} · {h.heads} cabezas</option>)}
                           </select>
                         </div>
-                        <div><label style={smallLabelStyle}>Cabezas</label><input type="number" value={s.heads} onChange={(e) => updateSupplementRow(s.id, "heads", e.target.value)} style={inputStyle} /></div>
-                        <div><label style={smallLabelStyle}>Peso</label><input type="number" value={s.weight} onChange={(e) => updateSupplementRow(s.id, "weight", e.target.value)} style={inputStyle} /></div>
-                        <div><label style={smallLabelStyle}>Consumo % PV</label><input type="number" step="0.1" value={s.intake} onChange={(e) => updateSupplementRow(s.id, "intake", e.target.value)} style={inputStyle} /></div>
                         <div><label style={smallLabelStyle}>Kg ración/día</label><input type="number" step="0.1" value={s.kgRation} onChange={(e) => updateSupplementRow(s.id, "kgRation", e.target.value)} style={inputStyle} /></div>
                         <div><label style={smallLabelStyle}>% MS</label><input type="number" value={s.dmPercent} onChange={(e) => updateSupplementRow(s.id, "dmPercent", e.target.value)} style={inputStyle} /></div>
                         <div><label style={smallLabelStyle}>Sustitución</label><input type="number" step="0.01" value={s.substitutionRate} onChange={(e) => updateSupplementRow(s.id, "substitutionRate", e.target.value)} style={inputStyle} /></div>
@@ -1225,6 +1234,7 @@ export default function App() {
                         </div>
                         <button onClick={() => removeSupplementRow(s.id)} style={dangerButtonStyle}>Eliminar</button>
                       </div>
+                      {!herd.some(h => String(h.id) === String(s.herdId)) && <div style={{color:"#b91c1c", fontSize:13, marginTop:8}}>Seleccioná el lote: esta suplementación no se contabiliza hasta asignarla.</div>}
                     </div>
                   ))
                 )}
@@ -1248,6 +1258,8 @@ export default function App() {
                 <Line type="monotone" dataKey="demandaAjustada" stroke="#ea580c" strokeWidth={3} />
                 <Line type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={3} />
                 <Line type="monotone" dataKey="balanceReal" stroke="#7c3aed" strokeWidth={3} />
+                <Line type="monotone" dataKey="ofertaTotal" name="Oferta total (pasto + ración)" stroke="#0d9488" strokeWidth={3} />
+                <Line type="monotone" dataKey="balanceAlimenticio" name="Balance alimenticio total" stroke="#a855f7" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1265,6 +1277,8 @@ export default function App() {
                   <th style={thStyle}>Reducción pasto</th>
                   <th style={thStyle}>Demanda ajustada</th>
                   <th style={thStyle}>Suplemento MS</th>
+                  <th style={thStyle}>Oferta total MS</th>
+                  <th style={thStyle}>Balance alimenticio total</th>
                   <th style={thStyle}>Balance</th>
                   <th style={thStyle}>Balance real</th>
                 </tr>
@@ -1278,6 +1292,8 @@ export default function App() {
                     <td style={tdStyle}>{formatNumber(results.pastureReductionByMonth[i])}</td>
                     <td style={tdStyle}>{formatNumber(results.adjustedDemandByMonth[i])}</td>
                     <td style={tdStyle}>{formatNumber(results.supplementDmByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.totalFeedOfferByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.totalFeedBalanceByMonth[i])}</td>
                     <td style={{ ...tdStyle, color: results.balanceByMonth[i] < 0 ? "#dc2626" : "#16a34a", fontWeight: 600 }}>
                       {formatNumber(results.balanceByMonth[i])}
                     </td>
