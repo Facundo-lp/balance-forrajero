@@ -11,8 +11,6 @@ import {
 } from "recharts";
 
 const MONTHS = [
-  { key: "ene", label: "Ene", days: 31, index: 1 },
-  { key: "feb", label: "Feb", days: 28, index: 2 },
   { key: "mar", label: "Mar", days: 31, index: 3 },
   { key: "abr", label: "Abr", days: 30, index: 4 },
   { key: "may", label: "May", days: 31, index: 5 },
@@ -23,8 +21,9 @@ const MONTHS = [
   { key: "oct", label: "Oct", days: 31, index: 10 },
   { key: "nov", label: "Nov", days: 30, index: 11 },
   { key: "dic", label: "Dic", days: 31, index: 12 },
+  { key: "ene", label: "Ene", days: 31, index: 1 },
+  { key: "feb", label: "Feb", days: 28, index: 2 },
 ];
-
 const MONTH_OPTIONS = MONTHS.map((m) => ({
   value: m.index,
   label: m.label,
@@ -207,21 +206,39 @@ function getEffectiveStartMonth(crop) {
   return first.getMonth() + 1;
 }
 
-function getMonthActivationFactor(monthIndex, crop) {
-  const firstDate = getFirstGrazingDate(crop);
-  if (!firstDate) return 1;
+// Cada mes pertenece a un ejercicio marzo-febrero con año explícito.
+function exerciseMonthDate(monthIndex, exerciseYear) {
+  return new Date(exerciseYear + (monthIndex < 3 ? 1 : 0), monthIndex - 1, 1);
+}
 
-  const year = firstDate.getFullYear();
-  const monthStart = new Date(year, monthIndex - 1, 1);
-  const monthEnd = new Date(year, monthIndex, 0);
+function getCropEndDate(crop) {
+  const sowing = parseLocalDate(crop.sowingDate);
+  if (!sowing) return null;
+  const first = getFirstGrazingDate(crop);
+  if (!first) return null;
+  const endMonth = n(crop.endMonth);
+  if (endMonth < 1 || endMonth > 12) return null;
+  let endYear = sowing.getFullYear();
+  if (endMonth < sowing.getMonth() + 1) endYear += 1;
+  let end = new Date(endYear, endMonth, 0);
+  // El fin nunca puede preceder al primer pastoreo.
+  while (end < first) {
+    endYear += 1;
+    end = new Date(endYear, endMonth, 0);
+  }
+  return end;
+}
 
-  if (firstDate > monthEnd) return 0;
-  if (firstDate <= monthStart) return 1;
-
-  const totalDays = monthEnd.getDate();
-  const activeDays = totalDays - firstDate.getDate() + 1;
-
-  return Math.max(0, Math.min(1, activeDays / totalDays));
+function getMonthActivationFactor(monthIndex, crop, exerciseYear) {
+  const first = getFirstGrazingDate(crop);
+  const end = getCropEndDate(crop);
+  if (!first || !end) return 0;
+  const monthStart = exerciseMonthDate(monthIndex, exerciseYear);
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+  const from = new Date(Math.max(first.getTime(), monthStart.getTime()));
+  const to = new Date(Math.min(end.getTime(), monthEnd.getTime()));
+  if (to < from) return 0;
+  return (Math.round((to - from) / 86400000) + 1) / monthEnd.getDate();
 }
 
 function monthIsActive(monthIndex, startMonth, endMonth) {
@@ -343,13 +360,16 @@ export default function App() {
   );
 
   const [supplements, setSupplements] = useState(autosave?.supplements || []);
+  const [exerciseYear, setExerciseYear] = useState(
+    autosave?.exerciseYear ?? (Number((autosave?.paddocks || []).flatMap(p => [p.sowingDate, p.secondCrop?.sowingDate]).find(Boolean)?.slice(0, 4)) || new Date().getFullYear())
+  );
 
   useEffect(() => {
     localStorage.setItem(
       "bf_autosave",
-      JSON.stringify({ farm, paddocks, herd, supplements })
+      JSON.stringify({ farm, paddocks, herd, supplements, exerciseYear })
     );
-  }, [farm, paddocks, herd, supplements]);
+  }, [farm, paddocks, herd, supplements, exerciseYear]);
 
   const persistFarms = (list) => {
     setSavedFarms(list);
@@ -363,6 +383,7 @@ export default function App() {
       paddocks,
       herd,
       supplements,
+      exerciseYear,
     };
     persistFarms([...savedFarms, farmData]);
   };
@@ -372,6 +393,7 @@ export default function App() {
     setPaddocks(f.paddocks);
     setHerd(f.herd);
     setSupplements(f.supplements || []);
+    setExerciseYear(f.exerciseYear ?? new Date().getFullYear());
   };
 
   const duplicateScenario = () => {
@@ -382,7 +404,7 @@ export default function App() {
 
   const exportCSV = () => {
     const rows = MONTHS.map((m, i) => [
-      m.label,
+      `${m.label} ${exerciseYear + (m.index < 3 ? 1 : 0)}`,
       Math.round(results.offerByMonth[i]),
       Math.round(results.demandByMonth[i]),
       Math.round(results.pastureReductionByMonth[i]),
@@ -614,13 +636,12 @@ export default function App() {
             }
           }
         } else {
-          const startMonth = getEffectiveStartMonth(p);
-          if (monthIsActive(m.index, startMonth, p.endMonth)) {
+          const activationFactor = getMonthActivationFactor(m.index, p, exerciseYear);
+          if (activationFactor > 0) {
             const resource = getSubtypeRow(p.resourceType, p.subtype);
             if (resource) {
               const pct = n(resource.monthly[m.key]);
               const monthlyPerHa = resource.annual * (pct / 100);
-              const activationFactor = getMonthActivationFactor(m.index, p);
 
               total +=
                 monthlyPerHa *
@@ -638,9 +659,9 @@ export default function App() {
           const secondManagement =
             MANAGEMENT_LEVELS.find((lvl) => lvl.label === second.management)
               ?.factor ?? 1;
-          const secondStart = getEffectiveStartMonth(second);
+          const activationFactor = getMonthActivationFactor(m.index, second, exerciseYear);
 
-          if (monthIsActive(m.index, secondStart, second.endMonth)) {
+          if (activationFactor > 0) {
             const secondResource = getSubtypeRow(
               second.resourceType,
               second.subtype
@@ -648,7 +669,6 @@ export default function App() {
             if (secondResource) {
               const pct = n(secondResource.monthly[m.key]);
               const monthlyPerHa = secondResource.annual * (pct / 100);
-              const activationFactor = getMonthActivationFactor(m.index, second);
 
               total +=
                 monthlyPerHa *
@@ -668,7 +688,7 @@ export default function App() {
     const demandByMonth = MONTHS.map((m) => {
       return herd.reduce((sum, h) => {
         const daily = n(h.heads) * n(h.weight) * (n(h.intake) / 100);
-        return sum + daily * m.days;
+        return sum + daily * new Date(exerciseYear + (m.index < 3 ? 1 : 0), m.index, 0).getDate();
       }, 0);
     });
 
@@ -681,7 +701,7 @@ export default function App() {
           n(s.kgRation) *
           (n(s.dmPercent) / 100);
 
-        return sum + dailyDm * m.days;
+        return sum + dailyDm * new Date(exerciseYear + (m.index < 3 ? 1 : 0), m.index, 0).getDate();
       }, 0);
     });
 
@@ -694,7 +714,7 @@ export default function App() {
           n(s.kgRation) *
           (n(s.dmPercent) / 100);
 
-        return sum + dailyDm * m.days * n(s.substitutionRate);
+        return sum + dailyDm * new Date(exerciseYear + (m.index < 3 ? 1 : 0), m.index, 0).getDate() * n(s.substitutionRate);
       }, 0);
     });
 
@@ -727,7 +747,7 @@ export default function App() {
     const currentLoad = totalArea > 0 ? totalPV / totalArea : 0;
 
     const chartData = MONTHS.map((m, i) => ({
-      mes: m.label,
+      mes: `${m.label} ${exerciseYear + (m.index < 3 ? 1 : 0)}`,
       oferta: Math.round(offerByMonth[i]),
       demanda: Math.round(demandByMonth[i]),
       demandaAjustada: Math.round(adjustedDemandByMonth[i]),
@@ -804,7 +824,7 @@ export default function App() {
       chartData,
       alerts,
     };
-  }, [farm, paddocks, herd, supplements]);
+  }, [farm, paddocks, herd, supplements, exerciseYear]);
 
   return (
     <div style={pageStyle}>
@@ -815,11 +835,15 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 14: suplementación por múltiples categorías y balance real.
+              Versión 15: ejercicio marzo–febrero y cultivos que cruzan el año.
             </p>
           </div>
 
           <div style={actionsRowStyle}>
+            <label style={{display:"flex", alignItems:"center", gap:8}}>Ejercicio marzo–febrero
+              <input type="number" min="2000" max="2100" value={exerciseYear} onChange={e => setExerciseYear(Number(e.target.value))} style={{...inputStyle, width:100}} />
+              <span>– {exerciseYear + 1}</span>
+            </label>
             <button onClick={saveFarm} style={buttonStyle}>Guardar</button>
             <button onClick={duplicateScenario} style={buttonStyle}>Duplicar escenario</button>
             <button onClick={exportCSV} style={buttonStyle}>Exportar CSV</button>
@@ -1214,7 +1238,7 @@ export default function App() {
               <tbody>
                 {MONTHS.map((m, i) => (
                   <tr key={m.key}>
-                    <td style={tdStyle}>{m.label}</td>
+                    <td style={tdStyle}>{m.label} {exerciseYear + (m.index < 3 ? 1 : 0)}</td>
                     <td style={tdStyle}>{formatNumber(results.offerByMonth[i])}</td>
                     <td style={tdStyle}>{formatNumber(results.demandByMonth[i])}</td>
                     <td style={tdStyle}>{formatNumber(results.pastureReductionByMonth[i])}</td>
