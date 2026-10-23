@@ -241,6 +241,20 @@ function getMonthActivationFactor(monthIndex, crop, exerciseYear) {
   return (Math.round((to - from) / 86400000) + 1) / monthEnd.getDate();
 }
 
+// Salida exclusiva: el día de venta no genera consumo.
+function activeHerdDays(row, monthIndex, exerciseYear) {
+  const start = exerciseMonthDate(monthIndex, exerciseYear);
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  const entry = parseLocalDate(row.entryDate);
+  const exit = parseLocalDate(row.exitDate);
+  // Compatibilidad con rodeos de versiones anteriores: sin fechas, todo el ejercicio.
+  if (!entry && !exit) return Math.round((end - start) / 86400000);
+  if ((row.entryDate && !entry) || (row.exitDate && !exit)) return 0;
+  const from = entry && entry > start ? entry : start;
+  const to = exit && exit < end ? exit : end;
+  return Math.max(0, Math.round((to - from) / 86400000));
+}
+
 function monthIsActive(monthIndex, startMonth, endMonth) {
   const start = n(startMonth);
   const end = n(endMonth);
@@ -393,7 +407,10 @@ export default function App() {
     setPaddocks(f.paddocks);
     setHerd(f.herd);
     setSupplements(f.supplements || []);
-    setExerciseYear(f.exerciseYear ?? new Date().getFullYear());
+    setExerciseYear(f.exerciseYear ?? (
+      Number((f.paddocks || []).flatMap(p => [p.sowingDate, p.secondCrop?.sowingDate]).find(Boolean)?.slice(0, 4))
+      || new Date().getFullYear()
+    ));
   };
 
   const duplicateScenario = () => {
@@ -550,7 +567,11 @@ export default function App() {
         category: a.label,
         heads: 0,
         weight: a.weight,
+        entryWeight: a.weight,
+        exitWeight: a.weight,
         intake: a.intake,
+        entryDate: `${exerciseYear}-03-01`,
+        exitDate: `${exerciseYear + 1}-03-01`,
       },
     ]);
   };
@@ -566,6 +587,8 @@ export default function App() {
             ...h,
             category: value,
             weight: found?.weight ?? h.weight,
+            entryWeight: found?.weight ?? h.weight,
+            exitWeight: found?.weight ?? h.weight,
             intake: found?.intake ?? h.intake,
           };
         }
@@ -687,8 +710,11 @@ export default function App() {
 
     const demandByMonth = MONTHS.map((m) => {
       return herd.reduce((sum, h) => {
-        const daily = n(h.heads) * n(h.weight) * (n(h.intake) / 100);
-        return sum + daily * new Date(exerciseYear + (m.index < 3 ? 1 : 0), m.index, 0).getDate();
+        const averageWeight = (h.entryWeight != null && h.exitWeight != null)
+          ? (n(h.entryWeight) + n(h.exitWeight)) / 2
+          : n(h.weight);
+        const daily = n(h.heads) * averageWeight * (n(h.intake) / 100);
+        return sum + daily * activeHerdDays(h, m.index, exerciseYear);
       }, 0);
     });
 
@@ -742,7 +768,7 @@ export default function App() {
     const annualSupplementNet = supplementNetByMonth.reduce((a, b) => a + b, 0);
     const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
     const annualRealBalance = realBalanceByMonth.reduce((a, b) => a + b, 0);
-    const totalPV = herd.reduce((sum, h) => sum + n(h.heads) * n(h.weight), 0);
+    const totalPV = herd.reduce((sum, h) => sum + n(h.heads) * ((h.entryWeight != null && h.exitWeight != null) ? (n(h.entryWeight) + n(h.exitWeight)) / 2 : n(h.weight)), 0);
     const totalArea = paddocks.reduce((sum, p) => sum + n(p.hectares), 0);
     const currentLoad = totalArea > 0 ? totalPV / totalArea : 0;
 
@@ -1143,10 +1169,18 @@ export default function App() {
                         </select>
                       </div>
                       <div><label style={smallLabelStyle}>Cabezas</label><input type="number" value={h.heads} onChange={(e) => updateHerd(h.id, "heads", e.target.value)} style={inputStyle} /></div>
-                      <div><label style={smallLabelStyle}>Peso</label><input type="number" value={h.weight} onChange={(e) => updateHerd(h.id, "weight", e.target.value)} style={inputStyle} /></div>
+                      <div><label style={smallLabelStyle}>Peso entrada (kg)</label><input type="number" min="0" value={h.entryWeight ?? h.weight} onChange={(e) => updateHerd(h.id, "entryWeight", e.target.value)} style={inputStyle} /></div>
+                      <div><label style={smallLabelStyle}>Peso salida (kg)</label><input type="number" min="0" value={h.exitWeight ?? h.weight} onChange={(e) => updateHerd(h.id, "exitWeight", e.target.value)} style={inputStyle} /></div>
+                      <div><label style={smallLabelStyle}>Peso promedio (kg)</label><input type="number" readOnly value={((n(h.entryWeight ?? h.weight) + n(h.exitWeight ?? h.weight)) / 2).toFixed(1)} style={{...inputStyle, backgroundColor:"#f1f5f9"}} /></div>
                       <div><label style={smallLabelStyle}>Consumo % PV</label><input type="number" step="0.1" value={h.intake} onChange={(e) => updateHerd(h.id, "intake", e.target.value)} style={inputStyle} /></div>
                       <button onClick={() => removeHerd(h.id)} style={dangerButtonStyle}>Eliminar</button>
                     </div>
+                    <div style={{display:"flex", gap:12, flexWrap:"wrap", marginTop:12}}>
+                      <div style={{flex:"1 1 160px"}}><label style={smallLabelStyle}>Fecha de entrada</label><input type="date" value={h.entryDate || ""} onChange={e => updateHerd(h.id, "entryDate", e.target.value)} style={inputStyle}/></div>
+                      <div style={{flex:"1 1 160px"}}><label style={smallLabelStyle}>Fecha de salida / venta</label><input type="date" value={h.exitDate || ""} min={h.entryDate || undefined} onChange={e => updateHerd(h.id, "exitDate", e.target.value)} style={inputStyle}/></div>
+                    </div>
+                    {h.entryDate && h.exitDate && h.exitDate <= h.entryDate && <div style={{color:"#b91c1c", fontSize:13, marginTop:8}}>La salida debe ser posterior a la entrada.</div>}
+                    {!h.entryDate && !h.exitDate && <div style={{color:"#64748b", fontSize:12, marginTop:8}}>Sin fechas: lote presente durante todo el ejercicio (compatibilidad con datos anteriores).</div>}
                   </div>
                 ))}
               </div>
