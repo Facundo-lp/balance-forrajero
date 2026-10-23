@@ -268,6 +268,43 @@ function monthIsActive(monthIndex, startMonth, endMonth) {
   return monthIndex >= start || monthIndex <= end;
 }
 
+// Períodos semiabiertos: fecha de salida no cuenta como día de alimentación.
+function overlapDaysForSupplement(s, lot, monthIndex, exerciseYear) {
+  const monthStart = exerciseMonthDate(monthIndex, exerciseYear);
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+  const entry = parseLocalDate(lot.entryDate);
+  const exit = parseLocalDate(lot.exitDate);
+  const start = parseLocalDate(s.startDate);
+  const end = parseLocalDate(s.endDate);
+  if ((s.startDate && !start) || (s.endDate && !end)) return 0;
+  if (start && end && end <= start) return 0;
+  if (entry && exit && exit <= entry) return 0;
+  // Datos antiguos con meses, hasta que el usuario establezca fechas explícitas.
+  if (!start && !end && !monthIsActive(monthIndex, s.monthStart, s.monthEnd)) return 0;
+  const from = new Date(Math.max(monthStart.getTime(), entry?.getTime() ?? -Infinity, start?.getTime() ?? -Infinity));
+  const to = new Date(Math.min(monthEnd.getTime(), exit?.getTime() ?? Infinity, end?.getTime() ?? Infinity));
+  return Math.max(0, Math.round((to - from) / 86400000));
+}
+function lotAverageWeight(lot) {
+  return lot.entryWeight != null && lot.exitWeight != null
+    ? (n(lot.entryWeight) + n(lot.exitWeight)) / 2 : n(lot.weight);
+}
+function rationKgPerHead(s, lot) {
+  const dm = n(s.dmPercent) / 100;
+  if (dm <= 0 || dm > 1) return 0;
+  // Compatibilidad con suplementaciones previas: conservan sus kg tal cual.
+  if (s.rationPvPercent == null) return Math.max(0, n(s.kgRation));
+  return Math.max(0, lotAverageWeight(lot) * n(s.rationPvPercent) / 100 / dm);
+}
+function supplementStats(s, lot, exerciseYear) {
+  if (!lot) return { days: 0, kgHead: 0, totalKg: 0, totalDm: 0, cost: 0 };
+  const days = MONTHS.reduce((sum, m) => sum + overlapDaysForSupplement(s, lot, m.index, exerciseYear), 0);
+  const kgHead = rationKgPerHead(s, lot);
+  const totalKg = days * n(lot.heads) * kgHead;
+  return { days, kgHead, totalKg, totalDm: totalKg * n(s.dmPercent) / 100,
+    cost: totalKg / 1000 * n(s.pricePerTon) };
+}
+
 function SummaryCard({ title, value }) {
   return (
     <div style={summaryCardStyle}>
@@ -304,6 +341,11 @@ function defaultSupplementRow() {
     heads: 0,
     weight: animal.weight,
     intake: animal.intake,
+    rationPvPercent: 2,
+    feedingMode: "partial",
+    startDate: "",
+    endDate: "",
+    pricePerTon: 0,
     kgRation: 2,
     dmPercent: 90,
     substitutionRate: 0.3,
@@ -724,35 +766,29 @@ export default function App() {
       }, 0);
     });
 
-    // La suplementación pertenece a un lote concreto, nunca a toda una categoría.
-    // Se limita al período de permanencia del lote y a los meses seleccionados.
-    const supplementDmByMonth = MONTHS.map((m) =>
-      supplements.reduce((sum, s) => {
-        const lot = herd.find((h) => String(h.id) === String(s.herdId));
-        if (!lot || !monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
-        const days = activeHerdDays(lot, m.index, exerciseYear);
-        const dailyDm = n(lot.heads) * n(s.kgRation) * n(s.dmPercent) / 100;
-        return sum + dailyDm * days;
-      }, 0)
-    );
+    // Consumo real de ración en MS por lote y mes.
+    const supplementDmByMonth = MONTHS.map((m) => supplements.reduce((sum, s) => {
+      const lot = herd.find(h => String(h.id) === String(s.herdId));
+      if (!lot) return sum;
+      const days = overlapDaysForSupplement(s, lot, m.index, exerciseYear);
+      return sum + days * n(lot.heads) * rationKgPerHead(s, lot) * n(s.dmPercent) / 100;
+    }, 0));
 
-    const pastureReductionByMonth = MONTHS.map((m, i) =>
-      supplements.reduce((sum, s) => {
-        const lot = herd.find((h) => String(h.id) === String(s.herdId));
-        if (!lot || !monthIsActive(m.index, s.monthStart, s.monthEnd)) return sum;
-        const days = activeHerdDays(lot, m.index, exerciseYear);
-        const dailyDm = n(lot.heads) * n(s.kgRation) * n(s.dmPercent) / 100;
-        return sum + dailyDm * days * n(s.substitutionRate);
-      }, 0)
-    );
-
-    const adjustedDemandByMonth = MONTHS.map((_, i) =>
-      Math.max(0, demandByMonth[i] - pastureReductionByMonth[i])
-    );
-
-    const supplementNetByMonth = MONTHS.map((_, i) =>
-      Math.max(0, supplementDmByMonth[i] - pastureReductionByMonth[i])
-    );
+    // La demanda de pasto se estima por lote, sin descontar dos veces la ración.
+    // Modalidad completa: cero demanda pastoril durante el período definido.
+    // Modalidad parcial: la reducción se limita a la demanda pastoril del lote.
+    const pastureReductionByMonth = MONTHS.map((m) => herd.reduce((sum, lot) => {
+      const lotDemand = activeHerdDays(lot, m.index, exerciseYear) * n(lot.heads) * lotAverageWeight(lot) * n(lot.intake) / 100;
+      const reductions = supplements.filter(s => String(s.herdId) === String(lot.id)).reduce((subtotal, s) => {
+        const days = overlapDaysForSupplement(s, lot, m.index, exerciseYear);
+        const dailyDm = n(lot.heads) * rationKgPerHead(s, lot) * n(s.dmPercent) / 100;
+        if (s.feedingMode === "complete") return subtotal + days * n(lot.heads) * lotAverageWeight(lot) * n(lot.intake) / 100;
+        return subtotal + days * dailyDm * Math.min(1, Math.max(0, n(s.substitutionRate)));
+      }, 0);
+      return sum + Math.min(lotDemand, reductions);
+    }, 0));
+    const adjustedDemandByMonth = MONTHS.map((_, i) => Math.max(0, demandByMonth[i] - pastureReductionByMonth[i]));
+    const supplementNetByMonth = MONTHS.map((_, i) => Math.max(0, supplementDmByMonth[i] - pastureReductionByMonth[i]));
 
     const balanceByMonth = MONTHS.map(
       (_, i) => offerByMonth[i] - demandByMonth[i]
@@ -771,6 +807,8 @@ export default function App() {
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
     const annualAdjustedDemand = adjustedDemandByMonth.reduce((a, b) => a + b, 0);
     const annualSupplementDm = supplementDmByMonth.reduce((a, b) => a + b, 0);
+    const annualRationKg = supplements.reduce((sum, s) => sum + supplementStats(s, herd.find(h => String(h.id) === String(s.herdId)), exerciseYear).totalKg, 0);
+    const annualRationCost = supplements.reduce((sum, s) => sum + supplementStats(s, herd.find(h => String(h.id) === String(s.herdId)), exerciseYear).cost, 0);
     const annualPastureReduction = pastureReductionByMonth.reduce((a, b) => a + b, 0);
     const annualSupplementNet = supplementNetByMonth.reduce((a, b) => a + b, 0);
     const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
@@ -782,6 +820,7 @@ export default function App() {
     const chartData = MONTHS.map((m, i) => ({
       mes: `${m.label} ${exerciseYear + (m.index < 3 ? 1 : 0)}`,
       oferta: Math.round(offerByMonth[i]),
+      racion: Math.round(supplementDmByMonth[i]),
       demanda: Math.round(demandByMonth[i]),
       demandaAjustada: Math.round(adjustedDemandByMonth[i]),
       balance: Math.round(balanceByMonth[i]),
@@ -851,6 +890,8 @@ export default function App() {
       annualDemand,
       annualAdjustedDemand,
       annualSupplementDm,
+      annualRationKg,
+      annualRationCost,
       annualPastureReduction,
       annualSupplementNet,
       annualBalance,
@@ -872,7 +913,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 15: ejercicio marzo–febrero y cultivos que cruzan el año.
+              Versión 21: suplementación por lote, consumo % PV y balance alimenticio.
             </p>
           </div>
 
@@ -958,6 +999,8 @@ export default function App() {
               <SummaryCard title="Demanda original" value={`${formatNumber(results.annualDemand)} kg MS`} />
               <SummaryCard title="Demanda ajustada" value={`${formatNumber(results.annualAdjustedDemand)} kg MS`} />
               <SummaryCard title="Suplemento MS" value={`${formatNumber(results.annualSupplementDm)} kg MS`} />
+              <SummaryCard title="Ración necesaria" value={`${formatNumber(results.annualRationKg / 1000, 2)} t tal cual`} />
+              <SummaryCard title="Costo ración" value={`USD ${formatNumber(results.annualRationCost, 2)}`} />
               <SummaryCard title="Balance real" value={`${formatNumber(results.annualRealBalance)} kg MS`} />
             </div>
           </div>
@@ -1207,36 +1250,50 @@ export default function App() {
                 {supplements.length === 0 ? (
                   <div style={{ color: "#64748b", fontSize: 14 }}>No hay suplementación cargada.</div>
                 ) : (
-                  supplements.map((s) => (
+                  supplements.map((s) => {
+                    const lot = herd.find(h => String(h.id) === String(s.herdId));
+                    const stats = supplementStats(s, lot, exerciseYear);
+                    return (
                     <div key={s.id} style={boxStyle}>
                       <div style={supplementRowStyle}>
-                        <div style={{gridColumn:"span 2"}}>
+                        <div style={{gridColumn:"1 / -1"}}>
                           <label style={smallLabelStyle}>Lote a suplementar</label>
-                          <select value={s.herdId ?? ""} onChange={(e) => updateSupplementRow(s.id, "herdId", e.target.value)} style={inputStyle}>
+                          <select value={s.herdId ?? ""} onChange={e => updateSupplementRow(s.id,"herdId",e.target.value)} style={inputStyle}>
                             <option value="">Seleccionar lote…</option>
-                            {herd.map((h, idx) => <option key={h.id} value={String(h.id)}>Lote {idx + 1} · {h.category} · {h.heads} cabezas</option>)}
+                            {herd.map((h,idx) => <option key={h.id} value={String(h.id)}>Lote {idx+1} · {h.category} · {h.heads} cabezas</option>)}
                           </select>
                         </div>
-                        <div><label style={smallLabelStyle}>Kg ración/día</label><input type="number" step="0.1" value={s.kgRation} onChange={(e) => updateSupplementRow(s.id, "kgRation", e.target.value)} style={inputStyle} /></div>
-                        <div><label style={smallLabelStyle}>% MS</label><input type="number" value={s.dmPercent} onChange={(e) => updateSupplementRow(s.id, "dmPercent", e.target.value)} style={inputStyle} /></div>
-                        <div><label style={smallLabelStyle}>Sustitución</label><input type="number" step="0.01" value={s.substitutionRate} onChange={(e) => updateSupplementRow(s.id, "substitutionRate", e.target.value)} style={inputStyle} /></div>
-                        <div>
-                          <label style={smallLabelStyle}>Mes inicio</label>
-                          <select value={s.monthStart} onChange={(e) => updateSupplementRow(s.id, "monthStart", Number(e.target.value))} style={inputStyle}>
-                            {MONTH_OPTIONS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={smallLabelStyle}>Mes fin</label>
-                          <select value={s.monthEnd} onChange={(e) => updateSupplementRow(s.id, "monthEnd", Number(e.target.value))} style={inputStyle}>
-                            {MONTH_OPTIONS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
-                          </select>
-                        </div>
+                        <div><label style={smallLabelStyle}>Modalidad</label>
+                          <select value={s.feedingMode || "partial"} onChange={e => updateSupplementRow(s.id,"feedingMode",e.target.value)} style={inputStyle}>
+                            <option value="partial">Pastoreo + ración</option><option value="complete">100% ración (sin pasto)</option>
+                          </select></div>
+                        <div><label style={smallLabelStyle}>Ración (% PV, base MS)</label>
+                          <input type="number" min="0" max="10" step="0.1" value={s.rationPvPercent ?? (lot ? (n(s.kgRation)*n(s.dmPercent)/100/Math.max(1,lotAverageWeight(lot))*100).toFixed(2) : 0)} onChange={e => updateSupplementRow(s.id,"rationPvPercent",e.target.value)} style={inputStyle}/></div>
+                        <div><label style={smallLabelStyle}>Materia seca de ración (%)</label>
+                          <input type="number" min="1" max="100" value={s.dmPercent} onChange={e => updateSupplementRow(s.id,"dmPercent",e.target.value)} style={inputStyle}/></div>
+                        {s.feedingMode !== "complete" && <div><label style={smallLabelStyle}>Sustitución (0 a 1 kg MS/kg MS)</label>
+                          <input type="number" min="0" max="1" step="0.05" value={s.substitutionRate} onChange={e => updateSupplementRow(s.id,"substitutionRate",e.target.value)} style={inputStyle}/></div>}
+                        <div><label style={smallLabelStyle}>Inicio suplementación</label>
+                          <input type="date" value={s.startDate || ""} onChange={e => updateSupplementRow(s.id,"startDate",e.target.value)} style={inputStyle}/></div>
+                        <div><label style={smallLabelStyle}>Fin suplementación (exclusivo)</label>
+                          <input type="date" min={s.startDate || undefined} value={s.endDate || ""} onChange={e => updateSupplementRow(s.id,"endDate",e.target.value)} style={inputStyle}/></div>
+                        <div><label style={smallLabelStyle}>Precio ración (USD/t tal cual)</label>
+                          <input type="number" min="0" value={s.pricePerTon ?? 0} onChange={e => updateSupplementRow(s.id,"pricePerTon",e.target.value)} style={inputStyle}/></div>
                         <button onClick={() => removeSupplementRow(s.id)} style={dangerButtonStyle}>Eliminar</button>
                       </div>
-                      {!herd.some(h => String(h.id) === String(s.herdId)) && <div style={{color:"#b91c1c", fontSize:13, marginTop:8}}>Seleccioná el lote: esta suplementación no se contabiliza hasta asignarla.</div>}
+                      {!lot && <div style={{color:"#b91c1c",fontSize:13,marginTop:8}}>Seleccioná un lote para contabilizar la ración.</div>}
+                      {s.startDate && s.endDate && s.endDate <= s.startDate && <div style={{color:"#b91c1c",fontSize:13}}>La fecha final debe ser posterior a la inicial.</div>}
+                      {(!s.startDate || !s.endDate) && <div style={{color:"#64748b",fontSize:12,marginTop:8}}>Completá ambas fechas para delimitar el período. Si se dejan vacías, los registros antiguos conservan sus meses originales.</div>}
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginTop:12}}>
+                        <SummaryCard title="Kg ración/cabeza/día (tal cual)" value={formatNumber(stats.kgHead,2)}/>
+                        <SummaryCard title="Días efectivos del ejercicio" value={formatNumber(stats.days)}/>
+                        <SummaryCard title="Ración total (t tal cual)" value={formatNumber(stats.totalKg/1000,2)}/>
+                        <SummaryCard title="Ración total (t MS)" value={formatNumber(stats.totalDm/1000,2)}/>
+                        <SummaryCard title="Costo total (USD)" value={formatNumber(stats.cost,2)}/>
+                      </div>
+                      {s.feedingMode === "complete" && <div style={{color:"#92400e",fontSize:12,marginTop:8}}>100% ración elimina la demanda pastoril del lote en ese período. Verificá que la dieta completa aporte fibra efectiva y nutrientes adecuados.</div>}
                     </div>
-                  ))
+                  );})
                 )}
               </div>
             </div>
@@ -1253,13 +1310,10 @@ export default function App() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="oferta" stroke="#16a34a" strokeWidth={3} />
-                <Line type="monotone" dataKey="demanda" stroke="#dc2626" strokeWidth={3} />
-                <Line type="monotone" dataKey="demandaAjustada" stroke="#ea580c" strokeWidth={3} />
-                <Line type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={3} />
-                <Line type="monotone" dataKey="balanceReal" stroke="#7c3aed" strokeWidth={3} />
-                <Line type="monotone" dataKey="ofertaTotal" name="Oferta total (pasto + ración)" stroke="#0d9488" strokeWidth={3} />
-                <Line type="monotone" dataKey="balanceAlimenticio" name="Balance alimenticio total" stroke="#a855f7" strokeWidth={3} />
+                <Line type="monotone" dataKey="oferta" name="Oferta de pasto" stroke="#16a34a" strokeWidth={3} />
+                <Line type="monotone" dataKey="racion" name="Oferta de ración MS" stroke="#2563eb" strokeWidth={3} />
+                <Line type="monotone" dataKey="demanda" name="Demanda animal total" stroke="#ea580c" strokeWidth={3} />
+                <Line type="monotone" dataKey="balanceAlimenticio" name="Balance alimenticio total" stroke="#9333ea" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </div>
