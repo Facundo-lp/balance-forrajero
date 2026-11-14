@@ -960,10 +960,10 @@ export default function App() {
     const supplementNetByMonth = MONTHS.map((_, i) => Math.max(0, supplementDmByMonth[i] - pastureReductionByMonth[i]));
     const totalFeedOfferByMonth = MONTHS.map((_, i) => offerByMonth[i] + supplementDmByMonth[i]);
 
-    // Inventario por potrero: pérdidas de calidad y capacidad máxima de diferimiento.
-    // Son supuestos explícitos, no una medición de biomasa del establecimiento.
-    const STOCK_CAP_KG_HA = 2500; // MS aprovechable que se puede diferir
-    const MONTHLY_LOSS = 0.10; // senescencia y pérdidas sobre stock remanente
+    // Inventario de MS aprovechable: la eficiencia de utilización YA se descontó
+    // al calcular monthlyGrowthByPaddock. No aplicar otra merma genérica ni
+    // eliminar excedentes mediante un techo universal de stock.
+    // Solo se retira inventario cuando el ciclo forrajero ha terminado.
     const inventories = paddocks.map(() => 0);
     const availableStartByMonth = [], availableEndByMonth = [], pastureShortfallByMonth = [];
     const pastureConsumedByMonth = [], forageLossByMonth = [], inaccessibleByMonth = [];
@@ -989,18 +989,10 @@ export default function App() {
           const lastEnd = ends.length ? new Date(Math.max(...ends.map(d=>d.getTime()))) : null;
           if (lastEnd && lastEnd < monthStart) { losses += inventories[j]; inventories[j] = 0; }
         }
-        const decay = inventories[j] * MONTHLY_LOSS;
-        inventories[j] -= decay;
-        losses += decay;
       });
       const beginning = inventories.reduce((a,b)=>a+b,0);
       paddocks.forEach((p,j) => {
         inventories[j] += monthlyGrowthByPaddock[i][j];
-        const maxStock = Math.max(0,n(p.hectares))*STOCK_CAP_KG_HA;
-        if (inventories[j] > maxStock) {
-          losses += inventories[j]-maxStock;
-          inventories[j] = maxStock;
-        }
       });
       const accessible = paddocks.reduce((sum,p,j) => sum+(monthAccessible(p,m)?inventories[j]:0),0);
       const demand = adjustedDemandByMonth[i];
@@ -1542,7 +1534,7 @@ export default function App() {
 
         <div style={{ ...panelStyle, marginBottom: 24 }}>
           <h2 style={panelTitleStyle}>Gráfico mensual</h2>
-          <p style={{fontSize:13,color:"#92400e"}}>Producciones orientativas, no mediciones de campo. El stock aprovechable se limita a 2.500 kg MS/ha, con pérdidas mensuales del 10%. La demanda mensual no garantiza disponibilidad diaria: verificá aforos y remanentes antes de definir la carga.</p>
+          <p style={{fontSize:13,color:"#92400e"}}>Producciones orientativas, no mediciones de campo. El porcentaje de utilización se descuenta una sola vez; no se aplican mermas mensuales ni un límite universal de acumulación. El stock trasladado entre meses es una estimación contable, no una garantía de calidad ni de disponibilidad diaria. Verificá aforos, senescencia y remanentes antes de definir la carga.</p>
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
               <LineChart data={results.chartData}>
