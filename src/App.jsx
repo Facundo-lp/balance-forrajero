@@ -1050,52 +1050,57 @@ export default function App() {
       balanceAlimenticio: Math.round(totalFeedBalanceByMonth[i]),
     }));
 
-    const monthlyDeficits = MONTHS.filter((_, i) => balanceByMonth[i] < 0).map(
-      (m) => m.label
-    );
-
-    const monthlyDeficitsReal = MONTHS.filter(
-      (_, i) => pastureShortfallByMonth[i] > 0
-    ).map((m) => m.label);
-
+    // Alertas de flujo: EXACTAMENTE las mismas series de la gráfica.
+    // El inventario pastoril se informa aparte, sin confundirlo con el balance total.
+    const flowDeficitsWithoutRation = MONTHS.filter((_, i) =>
+      offerByMonth[i] + 0.001 < demandByMonth[i]
+    ).map(m => m.label);
+    const flowDeficitsWithRation = MONTHS.filter((_, i) =>
+      totalFeedOfferByMonth[i] + 0.001 < demandByMonth[i]
+    ).map(m => m.label);
+    const pastureInventoryDeficits = MONTHS.filter((_, i) =>
+      pastureShortfallByMonth[i] > 0.001
+    ).map(m => m.label);
+    const annualTotalFeedBalance = totalFeedOfferByMonth.reduce((sum, x, i) =>
+      sum + x - demandByMonth[i], 0);
     const alerts = [];
 
-    if (annualBalance < 0) {
-      alerts.push({ level: "high", text: "Balance anual negativo sin suplementación." });
-    }
-
-    if (pastureShortfallByMonth.some(x=>x>0)) {
-      alerts.push({ level: "high", text: "Balance real anual sigue negativo con la suplementación cargada." });
-    }
-
-    if (monthlyDeficits.length > 0) {
+    if (flowDeficitsWithRation.length > 0) {
       alerts.push({
-        level: "medium",
-        text: `Déficit mensual sin suplementación en: ${monthlyDeficits.join(", ")}.`,
+        level: "high",
+        text: `Según las curvas del gráfico, pasto + ración NO cubren la demanda mensual en: ${flowDeficitsWithRation.join(", ")}.`,
+      });
+    } else if (supplementDmByMonth.some(x => x > 0)) {
+      alerts.push({
+        level: "low",
+        text: "Según las curvas del gráfico, pasto + ración cubren la demanda mensual en todos los meses con animales. Esto no garantiza disponibilidad de pasto dentro del mes.",
       });
     }
 
-    if (monthlyDeficitsReal.length > 0) {
+    if (flowDeficitsWithoutRation.length > 0) {
       alerts.push({
         level: "medium",
-        text: `Déficit mensual real aún con suplementación en: ${monthlyDeficitsReal.join(", ")}.`,
+        text: `Comparando únicamente las curvas de pasto y demanda, hay déficit mensual sin ración en: ${flowDeficitsWithoutRation.join(", ")}.`,
       });
     }
 
-    if (pastureShortfallByMonth.some(x => x > 0)) {
-      alerts.push({level:"high",text:`La oferta no cubre la demanda en ${MONTHS.filter((_,i)=>pastureShortfallByMonth[i]>0).map(m=>m.label).join(", ")}. El excedente de otros meses no corrige esos faltantes.`});
+    if (pastureInventoryDeficits.length > 0) {
+      alerts.push({
+        level: "medium",
+        text: `Advertencia independiente del gráfico: el inventario de pastura registra faltantes en ${pastureInventoryDeficits.join(", ")}, según fechas de acceso y sustitución configurada. La curva azul suma la ración completa y no representa este inventario.`,
+      });
+    }
+
+    if (annualTotalFeedBalance < -0.001) {
+      alerts.push({
+        level: "medium",
+        text: "La suma anual de pasto + ración es inferior a la demanda anual. Los excedentes de otros meses no resuelven automáticamente los déficits mensuales.",
+      });
     }
     if (currentLoad > 850) {
       alerts.push({
         level: "medium",
         text: "Carga alta para un planteo pastoril. Revisar oferta, suplementación o carga animal.",
-      });
-    }
-
-    if (supplements.length > 0 && pastureShortfallByMonth.every(x=>x===0) && annualBalance < 0) {
-      alerts.push({
-        level: "low",
-        text: "La suplementación cargada corrige el déficit anual del sistema.",
       });
     }
 
@@ -1535,7 +1540,7 @@ export default function App() {
         <div style={{ ...panelStyle, marginBottom: 24 }}>
           <h2 style={panelTitleStyle}>Gráfico mensual</h2>
           <p style={{fontSize:13,color:"#92400e"}}>Producciones orientativas, no mediciones de campo. El porcentaje de utilización se descuenta una sola vez; no se aplican mermas mensuales ni un límite universal de acumulación. El stock trasladado entre meses es una estimación contable, no una garantía de calidad ni de disponibilidad diaria. Verificá aforos, senescencia y remanentes antes de definir la carga.</p>
-          <p style={{fontSize:13,color:"#475569"}}>La curva azul suma la materia seca de la ración a la oferta mensual de pasto. La sustitución configurada se utiliza en el cálculo del consumo de pastura; no se descuenta nuevamente de la curva azul.</p>
+          <p style={{fontSize:13,color:"#475569"}}>Las alertas de cobertura mensual comparan exactamente las curvas azul y naranja. Los faltantes del inventario de pastura se advierten por separado, porque dependen también de las fechas de acceso y de la sustitución configurada.</p>
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
               <LineChart data={results.chartData}>
