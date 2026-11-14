@@ -60,9 +60,9 @@ const SECOND_CROP_TYPES = [
 ];
 
 const MANAGEMENT_LEVELS = [
-  { label: "Bajo", factor: 0.7 },
-  { label: "Medio", factor: 1.0 },
-  { label: "Alto", factor: 1.3 },
+  { label: "Bajo", factor: 0.75 },
+  { label: "Medio", factor: 0.90 },
+  { label: "Alto", factor: 1.0 },
 ];
 
 const CLIMATE_SCENARIOS = [
@@ -119,7 +119,7 @@ const SEEDED_SUBTYPES = {
     { name: "Festuca + lotus", annual: 7500, monthly: { ene: 10, feb: 9, mar: 8, abr: 7, may: 6, jun: 5, jul: 5, ago: 6, sep: 9, oct: 12, nov: 12, dic: 9 }, defaultFirstGrazingDays: 90, defaultEndMonth: 12, defaultEfficiency: 65 },
   ],
   "Verdeo de invierno": [
-    { name: "Raigrás anual", annual: 9500, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 8, jun: 15, jul: 20, ago: 22, sep: 20, oct: 10, nov: 5, dic: 0 }, defaultFirstGrazingDays: 60, defaultEndMonth: 10, defaultEfficiency: 70 },
+    { name: "Raigrás anual", annual: 8000, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 12, jul: 13, ago: 17, sep: 25, oct: 18, nov: 5, dic: 0 }, defaultFirstGrazingDays: 60, defaultEndMonth: 10, defaultEfficiency: 70 },
     { name: "Avena", annual: 8500, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 12, jun: 20, jul: 23, ago: 20, sep: 15, oct: 8, nov: 2, dic: 0 }, defaultFirstGrazingDays: 45, defaultEndMonth: 10, defaultEfficiency: 70 },
     { name: "Avena + raigrás", annual: 9800, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18, jul: 22, ago: 22, sep: 17, oct: 9, nov: 2, dic: 0 }, defaultFirstGrazingDays: 50, defaultEndMonth: 10, defaultEfficiency: 70 },
     { name: "Raigrás tetraploide", annual: 10500, monthly: { ene: 0, feb: 0, mar: 0, abr: 0, may: 10, jun: 18, jul: 22, ago: 22, sep: 18, oct: 8, nov: 2, dic: 0 }, defaultFirstGrazingDays: 55, defaultEndMonth: 10, defaultEfficiency: 70 },
@@ -914,79 +914,39 @@ export default function App() {
     const climateFactor =
       CLIMATE_SCENARIOS.find((c) => c.label === farm.climate)?.factor ?? 1;
 
-    const offerByMonth = MONTHS.map((m) => {
-      return paddocks.reduce((sum, p) => {
-        let total = sum;
-
-        const primaryManagement =
-          MANAGEMENT_LEVELS.find((lvl) => lvl.label === p.management)?.factor ??
-          1;
-
-        if (p.resourceType === "Campo natural") {
-          if (monthIsActive(m.index, 1, p.endMonth)) {
-            const row = getFieldNaturalRow(farm.region, p.environment);
-            if (row) {
-              const dist = seasonToMonthly(row);
-              const pct = n(dist[m.key]);
-              const monthlyPerHa = row.annual * (pct / 100);
-
-              total +=
-                monthlyPerHa *
-                n(p.hectares) *
-                (n(p.efficiency) / 100) *
-                primaryManagement *
-                climateFactor;
-            }
-          }
-        } else {
-          const activationFactor = getMonthActivationFactor(m.index, p, exerciseYear);
-          if (activationFactor > 0) {
-            const resource = getSubtypeRow(p.resourceType, p.subtype);
-            if (resource) {
-              const pct = n(resource.monthly[m.key]);
-              const monthlyPerHa = resource.annual * (pct / 100);
-
-              total +=
-                monthlyPerHa *
-                activationFactor *
-                n(p.hectares) *
-                (n(p.efficiency) / 100) *
-                primaryManagement *
-                climateFactor;
-            }
-          }
-        }
-
-        if (p.secondCrop?.enabled) {
-          const second = p.secondCrop;
-          const secondManagement =
-            MANAGEMENT_LEVELS.find((lvl) => lvl.label === second.management)
-              ?.factor ?? 1;
-          const activationFactor = getMonthActivationFactor(m.index, second, exerciseYear);
-
-          if (activationFactor > 0) {
-            const secondResource = getSubtypeRow(
-              second.resourceType,
-              second.subtype
-            );
-            if (secondResource) {
-              const pct = n(secondResource.monthly[m.key]);
-              const monthlyPerHa = secondResource.annual * (pct / 100);
-
-              total +=
-                monthlyPerHa *
-                activationFactor *
-                n(p.hectares) *
-                (n(second.efficiency) / 100) *
-                secondManagement *
-                climateFactor;
-            }
-          }
-        }
-
-        return total;
-      }, 0);
-    });
+    // Presupuesto mensual de existencias utilizables, sin simulador de parcelas.
+    // La producción se incorpora desde la siembra, aunque aún no se pueda pastorear.
+    // El forraje de un cultivo no puede utilizarse antes del primer pastoreo.
+    const monthlyGrowthByPaddock = MONTHS.map(m => paddocks.map(p => {
+      const primaryManagement = MANAGEMENT_LEVELS.find(x => x.label === p.management)?.factor ?? 1;
+      const cropGrowth = (crop, management, efficiency) => {
+        const row = getSubtypeRow(crop.resourceType, crop.subtype);
+        if (!row) return 0;
+        const sow = parseLocalDate(crop.sowingDate);
+        const end = getCropEndDate(crop);
+        if (!sow || !end) return 0;
+        const monthStart = exerciseMonthDate(m.index, exerciseYear);
+        const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth()+1, 0);
+        const from = new Date(Math.max(monthStart.getTime(), sow.getTime()));
+        const to = new Date(Math.min(monthEnd.getTime(), end.getTime()));
+        if (to < from) return 0;
+        const days = Math.round((to-from)/86400000)+1;
+        return row.annual * n(row.monthly[m.key])/100 * days/monthEnd.getDate() *
+          n(p.hectares) * Math.max(0, Math.min(1, n(efficiency)/100)) * management * climateFactor;
+      };
+      if (p.resourceType === "Campo natural") {
+        const row = getFieldNaturalRow(farm.region,p.environment);
+        if (!row) return 0;
+        return row.annual * n(seasonToMonthly(row)[m.key])/100 * n(p.hectares) *
+          Math.max(0,Math.min(1,n(p.efficiency)/100)) * primaryManagement * climateFactor;
+      }
+      const primary = cropGrowth(p,primaryManagement,p.efficiency);
+      const second = p.secondCrop?.enabled ? cropGrowth(p.secondCrop,
+        MANAGEMENT_LEVELS.find(x=>x.label===p.secondCrop.management)?.factor ?? 1,
+        p.secondCrop.efficiency) : 0;
+      return primary + second;
+    }));
+    const offerByMonth = monthlyGrowthByPaddock.map(values => values.reduce((a,b)=>a+b,0));
 
     // Los tres indicadores salen del MISMO libro diario, evitando diferencias
     // por fechas, solapamientos y sustitución calculados en rutas separadas.
@@ -999,25 +959,70 @@ export default function App() {
     const adjustedDemandByMonth = MONTHS.map((_, i) => Math.max(0, demandByMonth[i] - pastureReductionByMonth[i]));
     const supplementNetByMonth = MONTHS.map((_, i) => Math.max(0, supplementDmByMonth[i] - pastureReductionByMonth[i]));
 
-    const balanceByMonth = MONTHS.map(
-      (_, i) => offerByMonth[i] - demandByMonth[i]
-    );
-
-    const realBalanceByMonth = MONTHS.map(
-      (_, i) => offerByMonth[i] - adjustedDemandByMonth[i]
-    );
-
-    // Balance de alimentos en MS: no aplicar sustitución aquí porque la
-    // demanda original ya representa el consumo total de MS estimado.
-    const totalFeedOfferByMonth = MONTHS.map((_, i) => offerByMonth[i] + supplementDmByMonth[i]);
-    // Balance de cobertura real: no atribuir pasto a animales que están
-    // exclusivamente a ración ni convertir exceso de ración en pasto.
-    // El excedente de pasto se informa por separado como saldo pastoril.
-    const coveredPastureByMonth = MONTHS.map((_, i) => Math.min(offerByMonth[i], adjustedDemandByMonth[i]));
-    const coveredRationByMonth = MONTHS.map((_, i) => Math.min(supplementDmByMonth[i], pastureReductionByMonth[i]));
-    const totalFeedBalanceByMonth = MONTHS.map((_, i) =>
-      coveredPastureByMonth[i] + coveredRationByMonth[i] - demandByMonth[i]
-    );
+    // Inventario por potrero: pérdidas de calidad y capacidad máxima de diferimiento.
+    // Son supuestos explícitos, no una medición de biomasa del establecimiento.
+    const STOCK_CAP_KG_HA = 2500; // MS aprovechable que se puede diferir
+    const MONTHLY_LOSS = 0.10; // senescencia y pérdidas sobre stock remanente
+    const inventories = paddocks.map(() => 0);
+    const availableStartByMonth = [], availableEndByMonth = [], pastureShortfallByMonth = [];
+    const pastureConsumedByMonth = [], forageLossByMonth = [], inaccessibleByMonth = [];
+    const balanceByMonth = [], realBalanceByMonth = [], totalFeedBalanceByMonth = [];
+    const monthAccessible = (p,m) => {
+      if (p.resourceType === "Campo natural") return true;
+      const first = getFirstGrazingDate(p);
+      const secondFirst = p.secondCrop?.enabled ? getFirstGrazingDate(p.secondCrop) : null;
+      const monthEnd = new Date(exerciseMonthDate(m.index,exerciseYear).getFullYear(),m.index,0);
+      const primaryEnd = getCropEndDate(p);
+      const secondEnd = p.secondCrop?.enabled ? getCropEndDate(p.secondCrop) : null;
+      return Boolean((first && first<=monthEnd && primaryEnd && primaryEnd>=exerciseMonthDate(m.index,exerciseYear)) ||
+        (secondFirst && secondFirst<=monthEnd && secondEnd && secondEnd>=exerciseMonthDate(m.index,exerciseYear)));
+    };
+    MONTHS.forEach((m,i) => {
+      const monthStart = exerciseMonthDate(m.index,exerciseYear);
+      const monthEnd = new Date(monthStart.getFullYear(),monthStart.getMonth()+1,0);
+      let losses = 0;
+      paddocks.forEach((p,j) => {
+        // Evita trasladar existencias de un cultivo ya terminado a otro cultivo.
+        if (p.resourceType !== "Campo natural") {
+          const ends = [getCropEndDate(p), p.secondCrop?.enabled ? getCropEndDate(p.secondCrop) : null].filter(Boolean);
+          const lastEnd = ends.length ? new Date(Math.max(...ends.map(d=>d.getTime()))) : null;
+          if (lastEnd && lastEnd < monthStart) { losses += inventories[j]; inventories[j] = 0; }
+        }
+        const decay = inventories[j] * MONTHLY_LOSS;
+        inventories[j] -= decay;
+        losses += decay;
+      });
+      const beginning = inventories.reduce((a,b)=>a+b,0);
+      paddocks.forEach((p,j) => {
+        inventories[j] += monthlyGrowthByPaddock[i][j];
+        const maxStock = Math.max(0,n(p.hectares))*STOCK_CAP_KG_HA;
+        if (inventories[j] > maxStock) {
+          losses += inventories[j]-maxStock;
+          inventories[j] = maxStock;
+        }
+      });
+      const accessible = paddocks.reduce((sum,p,j) => sum+(monthAccessible(p,m)?inventories[j]:0),0);
+      const demand = adjustedDemandByMonth[i];
+      let remaining = Math.min(demand,accessible);
+      const consumed = remaining;
+      paddocks.forEach((p,j)=>{
+        if (!monthAccessible(p,m) || accessible<=0) return;
+        const take = consumed * inventories[j]/accessible;
+        inventories[j] = Math.max(0,inventories[j]-take);
+      });
+      const closing = inventories.reduce((a,b)=>a+b,0);
+      const shortfall = Math.max(0,demand-consumed);
+      availableStartByMonth.push(beginning);
+      availableEndByMonth.push(closing);
+      pastureConsumedByMonth.push(consumed);
+      pastureShortfallByMonth.push(shortfall);
+      forageLossByMonth.push(losses);
+      inaccessibleByMonth.push(Math.max(0,inventories.reduce((a,b)=>a+b,0)-paddocks.reduce((sum,p,j)=>sum+(monthAccessible(p,m)?inventories[j]:0),0)));
+      balanceByMonth.push(offerByMonth[i]-demandByMonth[i]); // balance de flujo, solo referencia
+      realBalanceByMonth.push(closing); // inventario final de pasto utilizable
+      const rationDeficit = Math.max(0,pastureReductionByMonth[i]-supplementDmByMonth[i]);
+      totalFeedBalanceByMonth.push(-(shortfall+rationDeficit));
+    });
 
     const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
     const annualDemand = demandByMonth.reduce((a, b) => a + b, 0);
@@ -1030,7 +1035,7 @@ export default function App() {
     const annualPastureReduction = pastureReductionByMonth.reduce((a, b) => a + b, 0);
     const annualSupplementNet = supplementNetByMonth.reduce((a, b) => a + b, 0);
     const annualBalance = balanceByMonth.reduce((a, b) => a + b, 0);
-    const annualRealBalance = realBalanceByMonth.reduce((a, b) => a + b, 0);
+    const annualRealBalance = availableEndByMonth.at(-1) ?? 0;
     const totalPV = herd.reduce((sum, h) => sum + n(h.heads) * ((h.entryWeight != null && h.exitWeight != null) ? (n(h.entryWeight) + n(h.exitWeight)) / 2 : n(h.weight)), 0);
     const totalArea = paddocks.reduce((sum, p) => sum + n(p.hectares), 0);
     const currentLoad = totalArea > 0 ? totalPV / totalArea : 0;
@@ -1043,6 +1048,11 @@ export default function App() {
       demandaAjustada: Math.round(adjustedDemandByMonth[i]),
       balance: Math.round(balanceByMonth[i]),
       balanceReal: Math.round(realBalanceByMonth[i]),
+      stockInicial: Math.round(availableStartByMonth[i]),
+      stockFinal: Math.round(availableEndByMonth[i]),
+      consumoPasto: Math.round(pastureConsumedByMonth[i]),
+      deficitPasto: Math.round(pastureShortfallByMonth[i]),
+      perdidas: Math.round(forageLossByMonth[i]),
       ofertaTotal: Math.round(totalFeedOfferByMonth[i]),
       balanceAlimenticio: Math.round(totalFeedBalanceByMonth[i]),
     }));
@@ -1052,7 +1062,7 @@ export default function App() {
     );
 
     const monthlyDeficitsReal = MONTHS.filter(
-      (_, i) => realBalanceByMonth[i] < 0
+      (_, i) => pastureShortfallByMonth[i] > 0
     ).map((m) => m.label);
 
     const alerts = [];
@@ -1061,7 +1071,7 @@ export default function App() {
       alerts.push({ level: "high", text: "Balance anual negativo sin suplementación." });
     }
 
-    if (annualRealBalance < 0) {
+    if (pastureShortfallByMonth.some(x=>x>0)) {
       alerts.push({ level: "high", text: "Balance real anual sigue negativo con la suplementación cargada." });
     }
 
@@ -1079,6 +1089,9 @@ export default function App() {
       });
     }
 
+    if (pastureShortfallByMonth.some(x => x > 0)) {
+      alerts.push({level:"high",text:`La oferta no cubre la demanda en ${MONTHS.filter((_,i)=>pastureShortfallByMonth[i]>0).map(m=>m.label).join(", ")}. El excedente de otros meses no corrige esos faltantes.`});
+    }
     if (currentLoad > 850) {
       alerts.push({
         level: "medium",
@@ -1086,7 +1099,7 @@ export default function App() {
       });
     }
 
-    if (supplements.length > 0 && annualRealBalance > 0 && annualBalance < 0) {
+    if (supplements.length > 0 && pastureShortfallByMonth.every(x=>x===0) && annualBalance < 0) {
       alerts.push({
         level: "low",
         text: "La suplementación cargada corrige el déficit anual del sistema.",
@@ -1095,6 +1108,7 @@ export default function App() {
 
     return {
       offerByMonth,
+      availableStartByMonth, availableEndByMonth, pastureConsumedByMonth, pastureShortfallByMonth, forageLossByMonth,
       demandByMonth,
       adjustedDemandByMonth,
       supplementDmByMonth,
@@ -1132,7 +1146,7 @@ export default function App() {
               Balance Forrajero
             </h1>
             <p style={{ color: "#64748b", marginTop: 8 }}>
-              Versión 52 experimental: revisión de tasa de pasaje ruminal y trazabilidad energética/proteica; corrección de suplementación y pruebas de invariantes; distribución diaria por parcela con biomasa y descanso individuales. Balance alimenticio y simulador de producción animal y pastoreo.
+              Presupuesto forrajero predial: oferta, demanda, suplementación e inventario mensual de materia seca aprovechable. Sin simulación de parcelas.
             </p>
           </div>
 
@@ -1221,7 +1235,8 @@ export default function App() {
               <SummaryCard title="Ración necesaria" value={`${formatNumber(results.annualRationKg / 1000, 2)} t tal cual`} />
               <SummaryCard title="Costo ración" value={`USD ${formatNumber(results.annualRationCost, 2)}`} />
               {results.unpricedRationDays > 0 && <div style={{color:'#b45309',fontSize:12}}>Hay {results.unpricedRationDays} días con ración exploratoria sin período/precio asignado: el costo no incluye esa ración.</div>}
-              <SummaryCard title="Balance real" value={`${formatNumber(results.annualRealBalance)} kg MS`} />
+              <SummaryCard title="Stock final de pasto" value={`${formatNumber(results.availableEndByMonth.at(-1))} kg MS`} />
+              <SummaryCard title="Déficit pastoril acumulado" value={`${formatNumber(results.pastureShortfallByMonth.reduce((a,b)=>a+b,0))} kg MS`} />
             </div>
           </div>
         </div>
@@ -1526,6 +1541,7 @@ export default function App() {
 
         <div style={{ ...panelStyle, marginBottom: 24 }}>
           <h2 style={panelTitleStyle}>Gráfico mensual</h2>
+          <p style={{fontSize:13,color:"#92400e"}}>Producciones orientativas, no mediciones de campo. El stock aprovechable se limita a 2.500 kg MS/ha, con pérdidas mensuales del 10%. La demanda mensual no garantiza disponibilidad diaria: verificá aforos y remanentes antes de definir la carga.</p>
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
               <LineChart data={results.chartData}>
@@ -1537,7 +1553,8 @@ export default function App() {
                 <Line type="monotone" dataKey="oferta" name="Oferta de pasto" stroke="#16a34a" strokeWidth={3} />
                 <Line type="monotone" dataKey="racion" name="Oferta de ración MS" stroke="#2563eb" strokeWidth={3} />
                 <Line type="monotone" dataKey="demanda" name="Demanda animal total" stroke="#ea580c" strokeWidth={3} />
-                <Line type="monotone" dataKey="balanceAlimenticio" name="Saldo de cobertura alimenticia" stroke="#9333ea" strokeWidth={3} />
+                <Line type="monotone" dataKey="stockFinal" name="Stock final aprovechable" stroke="#9333ea" strokeWidth={3} />
+                <Line type="monotone" dataKey="deficitPasto" name="Déficit pastoril no cubierto" stroke="#dc2626" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1556,9 +1573,14 @@ export default function App() {
                   <th style={thStyle}>Demanda ajustada</th>
                   <th style={thStyle}>Suplemento MS</th>
                   <th style={thStyle}>Oferta total MS</th>
-                  <th style={thStyle}>Saldo cobertura alimenticia</th>
+                  <th style={thStyle}>Déficit alimentación MS</th>
+                  <th style={thStyle}>Stock inicial</th>
+                  <th style={thStyle}>Consumo de pasto</th>
+                  <th style={thStyle}>Pérdidas de pasto</th>
+                  <th style={thStyle}>Déficit pastoril</th>
+                  <th style={thStyle}>Stock final</th>
                   <th style={thStyle}>Balance</th>
-                  <th style={thStyle}>Balance real</th>
+                  <th style={thStyle}>Stock final aprovechable</th>
                 </tr>
               </thead>
               <tbody>
@@ -1572,6 +1594,11 @@ export default function App() {
                     <td style={tdStyle}>{formatNumber(results.supplementDmByMonth[i])}</td>
                     <td style={tdStyle}>{formatNumber(results.totalFeedOfferByMonth[i])}</td>
                     <td style={tdStyle}>{formatNumber(results.totalFeedBalanceByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.availableStartByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.pastureConsumedByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.forageLossByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.pastureShortfallByMonth[i])}</td>
+                    <td style={tdStyle}>{formatNumber(results.availableEndByMonth[i])}</td>
                     <td style={{ ...tdStyle, color: results.balanceByMonth[i] < 0 ? "#dc2626" : "#16a34a", fontWeight: 600 }}>
                       {formatNumber(results.balanceByMonth[i])}
                     </td>
