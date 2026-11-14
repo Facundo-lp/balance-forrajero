@@ -956,7 +956,9 @@ export default function App() {
     const pastureReductionByMonth = feedLedger.map(x => x.pastureReduction);
     const feedConflictDays = feedLedger.reduce((sum, x) => sum + x.conflictDays, 0);
 
-    const adjustedDemandByMonth = MONTHS.map((_, i) => Math.max(0, demandByMonth[i] - pastureReductionByMonth[i]));
+    // Balance alimenticio en kg MS: la ración cubre parte de la demanda total.
+    // El coeficiente de sustitución describe comportamiento de pastoreo, no aporte nutritivo.
+    const adjustedDemandByMonth = MONTHS.map((_, i) => Math.max(0, demandByMonth[i] - supplementDmByMonth[i]));
     const supplementNetByMonth = MONTHS.map((_, i) => Math.max(0, supplementDmByMonth[i] - pastureReductionByMonth[i]));
     const totalFeedOfferByMonth = MONTHS.map((_, i) => offerByMonth[i] + supplementDmByMonth[i]);
 
@@ -1013,8 +1015,7 @@ export default function App() {
       inaccessibleByMonth.push(Math.max(0,inventories.reduce((a,b)=>a+b,0)-paddocks.reduce((sum,p,j)=>sum+(monthAccessible(p,m)?inventories[j]:0),0)));
       balanceByMonth.push(offerByMonth[i]-demandByMonth[i]); // balance de flujo, solo referencia
       realBalanceByMonth.push(closing); // inventario final de pasto utilizable
-      const rationDeficit = Math.max(0,pastureReductionByMonth[i]-supplementDmByMonth[i]);
-      totalFeedBalanceByMonth.push(-(shortfall+rationDeficit));
+      totalFeedBalanceByMonth.push(-shortfall);
     });
 
     const annualOffer = offerByMonth.reduce((a, b) => a + b, 0);
@@ -1084,12 +1085,6 @@ export default function App() {
       });
     }
 
-    if (pastureInventoryDeficits.length > 0) {
-      alerts.push({
-        level: "medium",
-        text: `Advertencia independiente del gráfico: el inventario de pastura registra faltantes en ${pastureInventoryDeficits.join(", ")}, según fechas de acceso y sustitución configurada. La curva azul suma la ración completa y no representa este inventario.`,
-      });
-    }
 
     if (annualTotalFeedBalance < -0.001) {
       alerts.push({
@@ -1540,7 +1535,7 @@ export default function App() {
         <div style={{ ...panelStyle, marginBottom: 24 }}>
           <h2 style={panelTitleStyle}>Gráfico mensual</h2>
           <p style={{fontSize:13,color:"#92400e"}}>Producciones orientativas, no mediciones de campo. El porcentaje de utilización se descuenta una sola vez; no se aplican mermas mensuales ni un límite universal de acumulación. El stock trasladado entre meses es una estimación contable, no una garantía de calidad ni de disponibilidad diaria. Verificá aforos, senescencia y remanentes antes de definir la carga.</p>
-          <p style={{fontSize:13,color:"#475569"}}>Las alertas de cobertura mensual comparan exactamente las curvas azul y naranja. Los faltantes del inventario de pastura se advierten por separado, porque dependen también de las fechas de acceso y de la sustitución configurada.</p>
+          <p style={{fontSize:13,color:"#475569"}}>La curva azul representa la oferta mensual de pasto + la materia seca de la ración. Las alertas de cobertura comparan esas mismas curvas. El inventario acumulado se mantiene como cálculo auxiliar; las fechas de acceso y la calidad de la dieta deben verificarse en campo.</p>
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
               <LineChart data={results.chartData}>
