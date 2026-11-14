@@ -958,6 +958,7 @@ export default function App() {
 
     const adjustedDemandByMonth = MONTHS.map((_, i) => Math.max(0, demandByMonth[i] - pastureReductionByMonth[i]));
     const supplementNetByMonth = MONTHS.map((_, i) => Math.max(0, supplementDmByMonth[i] - pastureReductionByMonth[i]));
+    const totalFeedOfferByMonth = MONTHS.map((_, i) => offerByMonth[i] + supplementDmByMonth[i]);
 
     // Inventario por potrero: pérdidas de calidad y capacidad máxima de diferimiento.
     // Son supuestos explícitos, no una medición de biomasa del establecimiento.
