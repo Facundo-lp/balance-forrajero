@@ -1535,6 +1535,7 @@ export default function App() {
         <div style={{ ...panelStyle, marginBottom: 24 }}>
           <h2 style={panelTitleStyle}>Gráfico mensual</h2>
           <p style={{fontSize:13,color:"#92400e"}}>Producciones orientativas, no mediciones de campo. El porcentaje de utilización se descuenta una sola vez; no se aplican mermas mensuales ni un límite universal de acumulación. El stock trasladado entre meses es una estimación contable, no una garantía de calidad ni de disponibilidad diaria. Verificá aforos, senescencia y remanentes antes de definir la carga.</p>
+          <p style={{fontSize:13,color:"#475569"}}>La curva azul suma la materia seca de la ración a la oferta mensual de pasto. La sustitución configurada se utiliza en el cálculo del consumo de pastura; no se descuenta nuevamente de la curva azul.</p>
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
               <LineChart data={results.chartData}>
@@ -1544,10 +1545,8 @@ export default function App() {
                 <Tooltip />
                 <Legend />
                 <Line type="monotone" dataKey="oferta" name="Oferta de pasto" stroke="#16a34a" strokeWidth={3} />
-                <Line type="monotone" dataKey="racion" name="Oferta de ración MS" stroke="#2563eb" strokeWidth={3} />
                 <Line type="monotone" dataKey="demanda" name="Demanda animal total" stroke="#ea580c" strokeWidth={3} />
-                <Line type="monotone" dataKey="stockFinal" name="Stock final aprovechable" stroke="#9333ea" strokeWidth={3} />
-                <Line type="monotone" dataKey="deficitPasto" name="Déficit pastoril no cubierto" stroke="#dc2626" strokeWidth={2} />
+                <Line type="monotone" dataKey="ofertaTotal" name="Oferta de pasto + suplementación (kg MS)" stroke="#2563eb" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </div>
