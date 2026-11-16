@@ -974,7 +974,8 @@ export default function App() {
       if (p.resourceType === "Campo natural") return true;
       const first = getFirstGrazingDate(p);
       const secondFirst = p.secondCrop?.enabled ? getFirstGrazingDate(p.secondCrop) : null;
-      const monthEnd = new Date(exerciseMonthDate(m.index,exerciseYear).getFullYear(),m.index,0);
+      const monthStart = exerciseMonthDate(m.index, exerciseYear);
+      const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
       const primaryEnd = getCropEndDate(p);
       const secondEnd = p.secondCrop?.enabled ? getCropEndDate(p.secondCrop) : null;
       return Boolean((first && first<=monthEnd && primaryEnd && primaryEnd>=exerciseMonthDate(m.index,exerciseYear)) ||
