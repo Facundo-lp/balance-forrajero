@@ -113,6 +113,8 @@ const SEEDED_SUBTYPES = {
     { name: "Cebadilla + trébol rojo", annual: 8200, monthly: { ene: 9, feb: 8, mar: 8, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 11, oct: 13, nov: 12, dic: 9 }, defaultFirstGrazingDays: 80, defaultEndMonth: 12, defaultEfficiency: 63 },
   ],
   "Pradera perenne": [
+    // Megamix Serkan: referencia orientativa para pastura establecida, no rendimiento comercial garantizado.
+    { name: "Megamix (Serkan)", annual: 8500, firstYearAnnual: 5000, monthly: { ene: 19, feb: 18, mar: 13, abr: 7, may: 2, jun: 0, jul: 0, ago: 0, sep: 1, oct: 6, nov: 14, dic: 20 }, defaultFirstGrazingDays: 90, defaultEndMonth: 12, defaultEfficiency: 65 },
     { name: "Festuca + trébol blanco + lotus", annual: 8500, monthly: { ene: 9, feb: 7, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 13, dic: 11 }, defaultFirstGrazingDays: 90, defaultEndMonth: 12, defaultEfficiency: 65 },
     { name: "Dactylis + trébol blanco + trébol rojo", annual: 9000, monthly: { ene: 10, feb: 8, mar: 7, abr: 7, may: 6, jun: 5, jul: 5, ago: 7, sep: 10, oct: 13, nov: 12, dic: 10 }, defaultFirstGrazingDays: 90, defaultEndMonth: 12, defaultEfficiency: 65 },
     { name: "Raigrás perenne + trébol blanco", annual: 8200, monthly: { ene: 8, feb: 7, mar: 8, abr: 8, may: 7, jun: 6, jul: 6, ago: 8, sep: 11, oct: 13, nov: 11, dic: 7 }, defaultFirstGrazingDays: 75, defaultEndMonth: 12, defaultEfficiency: 65 },
@@ -214,9 +216,15 @@ function exerciseMonthDate(monthIndex, exerciseYear) {
   return new Date(exerciseYear + (monthIndex < 3 ? 1 : 0), monthIndex - 1, 1);
 }
 
+function isMegamix(crop) {
+  return crop?.subtype === "Megamix (Serkan)";
+}
+
 function getCropEndDate(crop) {
   const sowing = parseLocalDate(crop.sowingDate);
   if (!sowing) return null;
+  // Megamix es perenne: no caduca al llegar al mes fin de un verdeo anual.
+  if (isMegamix(crop)) return new Date(2100, 11, 31);
   const first = getFirstGrazingDate(crop);
   if (!first) return null;
   const endMonth = n(crop.endMonth);
@@ -621,6 +629,7 @@ export default function App() {
         sowingDate: "",
         firstGrazingDays: 0,
         endMonth: 12,
+        megamixStage: "first",
         efficiency: 50,
         management: "Medio",
         secondCrop: defaultSecondCrop(),
@@ -776,6 +785,7 @@ export default function App() {
         }
 
         if (key === "subtype") {
+          if (value === "Megamix (Serkan)") updated.megamixStage = "first";
           const subtypeRow = getSubtypeRow(updated.resourceType, value);
           if (subtypeRow) {
             updated.firstGrazingDays = subtypeRow.defaultFirstGrazingDays;
@@ -931,7 +941,18 @@ export default function App() {
         const to = new Date(Math.min(monthEnd.getTime(), end.getTime()));
         if (to < from) return 0;
         const days = Math.round((to-from)/86400000)+1;
-        return row.annual * n(row.monthly[m.key])/100 * days/monthEnd.getDate() *
+        // Megamix: primer año (desde siembra hasta su primer aniversario)
+        // 5.000 kg MS/ha/año; luego 8.500 kg MS/ha/año.
+        // El selector permite representar una pastura ya establecida al cargarla.
+        let annual = row.annual;
+        if (isMegamix(crop)) {
+          const anniversary = new Date(sow.getFullYear()+1, sow.getMonth(), sow.getDate());
+          const firstYear = crop.megamixStage !== "established";
+          const firstDays = firstYear ? Math.max(0, Math.round((Math.min(to.getTime(), anniversary.getTime()-86400000)-from.getTime())/86400000)+1) : 0;
+          const matureDays = days-firstDays;
+          annual = (n(row.firstYearAnnual)*firstDays + n(row.annual)*matureDays)/days;
+        }
+        return annual * n(row.monthly[m.key])/100 * days/monthEnd.getDate() *
           n(p.hectares) * Math.max(0, Math.min(1, n(efficiency)/100)) * management * climateFactor;
       };
       if (p.resourceType === "Campo natural") {
@@ -1339,11 +1360,20 @@ export default function App() {
                         </>
                       )}
 
+                      {p.subtype === "Megamix (Serkan)" && p.resourceType !== "Campo natural" && (
+                        <div>
+                          <label style={smallLabelStyle}>Estado Megamix</label>
+                          <select value={p.megamixStage || "first"} onChange={(e) => updatePaddock(p.id, "megamixStage", e.target.value)} style={inputStyle}>
+                            <option value="first">Primer año (5.000 kg MS/ha/año)</option>
+                            <option value="established">Establecida (8.500 kg MS/ha/año)</option>
+                          </select>
+                        </div>
+                      )}
                       <div>
-                        <label style={smallLabelStyle}>Mes fin</label>
-                        <select value={p.endMonth} onChange={(e) => updatePaddock(p.id, "endMonth", Number(e.target.value))} style={inputStyle}>
+                        <label style={smallLabelStyle}>{isMegamix(p) ? "Duración" : "Mes fin"}</label>
+                        {isMegamix(p) ? <input value="Perenne (sin fin anual)" disabled style={{ ...inputStyle, background: "#f1f5f9" }} /> : <select value={p.endMonth} onChange={(e) => updatePaddock(p.id, "endMonth", Number(e.target.value))} style={inputStyle}>
                           {MONTH_OPTIONS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
-                        </select>
+                        </select>}
                       </div>
 
                       <div>
