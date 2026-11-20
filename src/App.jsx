@@ -637,6 +637,11 @@ export default function App() {
     ]
   );
 
+  // Controles visuales: no limitan los potreros incluidos en el balance.
+  const [paddockSearch, setPaddockSearch] = useState("");
+  const [paddockFilter, setPaddockFilter] = useState("Todos");
+  const [expandedPaddockId, setExpandedPaddockId] = useState(null);
+
   const [herd, setHerd] = useState(
     autosave?.herd || [
       {
@@ -738,10 +743,14 @@ export default function App() {
   const environmentOptions = getEnvironmentOptions(farm.region);
 
   const addPaddock = () => {
+    const newId = Date.now();
+    setExpandedPaddockId(newId);
+    setPaddockSearch("");
+    setPaddockFilter("Todos");
     setPaddocks((prev) => [
       ...prev,
       {
-        id: Date.now(),
+        id: newId,
         name: `Potrero ${prev.length + 1}`,
         hectares: 0,
         resourceType: "Campo natural",
@@ -1290,8 +1299,25 @@ export default function App() {
               <button onClick={addPaddock} style={buttonStyle}>+ Agregar</button>
             </div>
 
-            <div style={{ display: "grid", gap: 12 }}>
-              {paddocks.map((p) => {
+            <div style={{display:"flex",flexWrap:"wrap",gap:12,marginBottom:12,fontSize:13,color:"#475569"}}>
+              <strong>{paddocks.length} potreros</strong>
+              <span>{formatNumber(paddocks.reduce((sum,p)=>sum+n(p.hectares),0),1)} ha totales</span>
+              <span>Guardado automático en este navegador</span>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+              <input aria-label="Buscar potreros" placeholder="Buscar potrero por nombre o pastura…" value={paddockSearch} onChange={e=>setPaddockSearch(e.target.value)} style={{...inputStyle,flex:"2 1 190px"}} />
+              <select aria-label="Filtrar potreros" value={paddockFilter} onChange={e=>setPaddockFilter(e.target.value)} style={{...inputStyle,flex:"1 1 170px"}}>
+                <option value="Todos">Todos los recursos</option>
+                {RESOURCE_TYPES.map(type=><option key={type} value={type}>{type}</option>)}
+              </select>
+            </div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:10}}>Seleccioná «Editar» para desplegar los datos de un potrero. Los filtros solo cambian la visualización, no el balance.</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {paddocks.filter(p => {
+                const query=paddockSearch.trim().toLocaleLowerCase("es");
+                const matchesText=!query || [p.name,p.resourceType,p.subtype,p.environment,p.secondCrop?.subtype].some(v=>String(v||"").toLocaleLowerCase("es").includes(query));
+                return matchesText && (paddockFilter==="Todos" || p.resourceType===paddockFilter);
+              }).map((p) => {
                 const firstGrazingDate = getFirstGrazingDate(p);
                 const firstGrazingText = firstGrazingDate ? firstGrazingDate.toLocaleDateString("es-UY") : "No aplica";
 
@@ -1300,7 +1326,15 @@ export default function App() {
                 const secondFirstText = secondFirstDate ? secondFirstDate.toLocaleDateString("es-UY") : "No aplica";
 
                 return (
-                  <div key={p.id} style={paddockCardStyle}>
+                  <div key={p.id} style={{...paddockCardStyle,padding:12}}>
+                    <div style={{display:"flex",gap:10,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap"}}>
+                      <div style={{flex:"1 1 230px",minWidth:0}}>
+                        <strong>{p.name || "Potrero sin nombre"}</strong>
+                        <div style={{fontSize:12,color:"#64748b",marginTop:3}}>{formatNumber(n(p.hectares),1)} ha · {p.resourceType}{p.subtype ? ` · ${p.subtype}` : ""}{second.enabled ? " · Segundo cultivo" : ""}</div>
+                      </div>
+                      <button type="button" onClick={()=>setExpandedPaddockId(prev=>prev===p.id?null:p.id)} style={buttonStyle} aria-expanded={expandedPaddockId===p.id}>{expandedPaddockId===p.id?"Cerrar":"Editar"}</button>
+                    </div>
+                    {expandedPaddockId===p.id && <div style={{marginTop:14,display:"grid",gap:12}}>
                     <div style={paddockRow1Style}>
                       <div>
                         <label style={smallLabelStyle}>Nombre</label>
@@ -1458,6 +1492,7 @@ export default function App() {
                         </div>
                       </div>
                     )}
+                    </div>}
                   </div>
                 );
               })}
